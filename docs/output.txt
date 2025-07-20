@@ -1,0 +1,1946 @@
+xiii
+INTISARI
+RANCANG BANGUN SISTEM DETEKSI DAN ESTIMASI URUTAN
+TAMPILAN PADA ALAT OPERASI DENGAN YOLOV8 DAN MIDAS
+Muhammad Anang Mahrub
+18/431101/TK/47694
+Diajukan kepada Departemen Teknik Nuklir dan Teknik Fisika Fakultas Teknik
+Universitas Gadjah Mada pada tanggal 01 Juli 2025
+untuk memenuhi sebagian persyaratan untuk memperoleh derajat
+Sarjana Program Studi Teknik Fisika
+INTISARI
+Perkembangan teknologi membuka peluang penerapan dalam bidang
+kesehatan salah satunya adalah telesurgery. Dalam konteks telesurgery, dokter
+sering mengalami kesulitan koordinasi visual karena ketergantungan pada tampilan
+2D saja, yang dapat mengakibatkan kesalahan persepsi visual dan bahkan
+kecelakaan. Oleh karena itu, penelitian ini bertujuan untuk merancang sistem yang
+mampu meningkatkan persepsi visual dokter selama prosedur telesurgery dengan
+melakukan deteksi objek berupa alat operasi dan estimasi urutan tampilan dari
+setiap objek.
+Sistem ini memanfaatkan YOLOv8 untuk deteksi objek dan MiDaS Depth
+Estimation untuk estimasi urutan tampilan. Fokus utama penelitian adalah mencari
+kombinasi terbaik dari varian YOLOv8 dan MiDaS (tota 15 kombinasi)
+berdasarkan nilai Mean Average Precision (mAP) untuk deteksi objek dan waktu
+pemrosesan keseluruhan sistem untuk inferensi.
+Hasil penelitian menunjukkan bahwa sistem yang dirancang dengan
+YOLOv8 dan MiDaS berhasil mendeteksi objek, membedakan jenis objek
+(bengkok, gunting anatomis, pinset), dan memberikan estimasi urutan tampilan
+objek dengan baik. Varian YOLOv8m mencapai performa deteksi terbaik dengan
+F1 score sebesar 0,97 pada confidence 0,635, serta mAP50 sebesar 0,995 untuk
+kelas bengkok. Secara keseluruhan, YOLOv8s dan YOLOv8m memberikan
+kombinasi presisi dan kinerja stabil dengan nilai mAP50 sebesar 0,988 dan 0,986
+masing-masing. Waktu pemrosesan untuk YOLOv8m dengan MiDaS small adalah
+0,1149 detik dan untuk YOLOv8m dengan MiDaS small adalah 0,1486 detik.
+Evaluasi kualitas estimasi urutan tampilan MiDaS menggunakan Modulation
+Transfer Function (MTF) menunjukkan bahwa MiDaS small memiliki MTF50
+lebih tinggi (0,0094), mengindikasikan ketajaman spasial yang lebih tinggi namun
+mungkin dengan noise, sementara MiDaS hybrid dan large memberikan nilai yang
+lebih stabil dengan MTF50 sebesar 0,0063.
+Kata kunci: deteksi objek, estimasi kedalaman, YOLOv8, MiDaS
+Pembimbing Utama
+: Prof. Ir. Nazrul Effendy, S.T., M.T., Ph.D., IPM.
+Pembimbing Pendamping
+: Dr. Ir. Nur Abdillah Siddiq, S.T., IPP.
+xiv
+ABSTRACT
+DESIGN AND DEVELOPMENT OF A DETECTION AND VISUAL
+LAYERING ESTIMATION SYSTEM FOR SURGICAL INSTRUMENTS
+USING YOLOV8 AND MIDAS
+Muhammad Anang Mahrub
+18/431101/TK/47694
+Submitted to the Departement of Nuclear Engineering and Engineering Physics
+Faculty of Engineering Universitas Gadjah Mada on July 01, 2025
+in partial fulfillment of the requirement for the Degree of
+Bachelor of Engineering in Engineering Physics
+ABSTRACT
+Technological advancements have opened up opportunities for applications
+in the healthcare sector, one of which is telesurgery. In the context of telesurgery,
+surgeons often face difficulties with visual coordination due to reliance solely on
+2D displays, which can lead to visual perception errors and even accidents.
+Therefore, this study aims to design a system that can enhance surgeons’ visual
+perception during telesurgery procedures by performing object detection of surgical
+instruments and estimating their relative depth order.
+This system leverages YOLOv8 for object detection and MiDaS Depth
+Estimation for estimating the order of appearance based on depth. The main focus
+of this research is to find the best combination among YOLOv8 and MiDaS variants
+(a total of 15 combinations) based on the Mean Average Precision (mAP) for object
+detection and the overall system processing time during inference.
+The results show that the system designed with YOLOv8 and MiDaS
+successfully detects objects, distinguishes object types (bengkok, anatomical
+scissors, forceps), and accurately estimates the relative depth order of the objects.
+The YOLOv8m variant achieved the best detection performance with an F1 score
+of 0.97 at a confidence threshold of 0.635, and an mAP50 of 0.995 for the bengkok
+class. Overall, YOLOv8s and YOLOv8m provided a combination of high precision
+and stable performance with mAP50 values of 0.988 and 0.986, respectively. The
+processing time for YOLOv8m with MiDaS Small was 0.1149 seconds, and for
+YOLOv8m with MiDaS Hybrid was 0.1486 seconds. The quality evaluation of
+depth order estimation using the Modulation Transfer Function (MTF) indicated
+that MiDaS Small produced a higher MTF50 value (0.0094), reflecting higher
+spatial sharpness but with potential noise, whereas MiDaS Hybrid and Large
+yielded more stable values with an MTF50 of 0.0063.
+Keywords: object detection, depth estimation, YOLOv8, MiDaS
+Supervisor
+: Prof. Ir. Nazrul Effendy, S.T., M.T., Ph.D., IPM.
+Co-supervisor : Dr. Ir. Nur Abdillah Siddiq, S.T., IPP.
+1
+PENDAHULUAN
+Latar Belakang
+Bidang kesehatan merupakan salah satu sektor yang harus ikut berinovasi
+dan berkembang sesuai dengan kemajuan teknologi. Salah satu upaya inovasi di
+bidang kesehatan adalah diperkenalkannya istilah telesurgery. Telesurgery pertama
+kali dilakukan pada tahun 2001 dimana pasien yang berada di Strasbourg Prancis
+dioperasi oleh perawat yang berada di New York. Untuk mendukung
+telesurgery, diperlukan seorang operator (dalam hal ini dokter spesialis) untuk
+menggerakkan robot perawat dari jarak jauh. Robot perawat yang membantu dalam
+proses telesurgery adalah robot yang tidak otonom. Secara level keotonoman, robot
+perawat yang membantu proses telesurgery adalah robot dengan level 0
+keotonoman. Oleh karena itu, peran operator yang melakukan proses operasi
+menjadi sangat krusial dalam hal keselamatan. Dokter yang melakukan proses
+operasi dari jarak jauh perlu memahami kondisi visual di ruang operasi dengan
+bantuan kamera yang dipasang pada lengan robot perawat. Salah satu masalah yang
+muncul ketika melakukan telesurgery adalah sulitnya mengkoordinasikan mata
+operator dengan tangan ketika mengandalkan tampilan 2D saja. Dilaporkan 97%
+kecelakaan bedah pada prosedur kolesistektomi laparoskopi terjadi akibat
+kesalahan persepsi visual.
+Dokter yang melakukan telesurgery dapat terbantu dengan tampilan gambar
+yang dapat menunjukkan objek yang terdeteksi beserta posisinya secara 3D.
+Klasifikasi gambar medis adalah kemampuan untuk mengkategorisasi gambar
+masukan seperti membedakan antara tumor ganas dan tumor jinak. Deteksi objek
+medis merujuk pada proses lokalisasi dan pengkategorian objek yang menjadi fokus
+(organ, tumor, dan instrumen bedah) pada citra medis. Mengklasifikasikan
+instrumen bedah dengan benar pada citra medis sangat penting untuk mendukung
+tugas kognitif dalam telesurgery yang dibantu oleh robot perawat. Mengingat
+klasifikasi instrumen sangat erat dengan tugas deteksi dan segmentasi, saat ini
+2
+belum ada model kecerdasan buatan yang secara khusus dilatih untuk
+mengklasifikasi instrumen bedah.
+Persepsi visual sangat penting untuk dokter yang melakukan telesurgery.
+Dokter harus mengikuti kondisi dan melihat posisi objek untuk kemudian
+menggerakkan lengan robot sesuai dengan tujuannya. Selama proses melihat,
+dokter juga harus memeriksa posisi lengan robot pembantu. Banyak robot yang
+dilengkapi dengan laser dan sensor jarak ultrasonik. Robot juga dilengkapi kamera
+untuk
+membantu
+dokter
+memfokuskan
+perhatian
+terhadap
+objek
+dan
+menginterpretasikan gambar.
+Sebuah objek dapat dideteksi dan diinterpretasi posisinya pada sebuah
+gambar dengan bantuan kecerdasan buatan. Machine Learning (ML) adalah salah
+satu bagian untuk membentuk sebuah sistem kecerdasan buatan. Peran ML dalam
+sebuah sistem kecerdasan buatan adalah beradaptasi dengan keadaan baru yang
+mungkin tidak bisa dibayangkan oleh pengembang, mendeteksi pola dari
+sekumpulan data, membuat respon baru dari pola yang dikenali, dan membuat
+keputusan berdasarkan berhasil atau tidaknya respon yang diberikan. ML berpusat
+pada penggunaan algoritma untuk memanipulasi data. Agar berhasil, ML harus
+menggunakan algoritma yang sesuai agar hasil yang didapatkan maksimal. Data
+yang digunakan untuk ML juga harus dianalisis sesuai dengan algoritma yang akan
+dipakai. Dasar dari ML adalah matematika. Algoritma menentukan cara
+menafsirkan data yang besar dengan cara tertentu. Algoritma memproses data
+masukan dengan cara tertentu dan menghasilkan keluaran yang dapat diprediksi
+dari pola tertentu. Alasan diperlukannya kecerdasan buatan dan ML adalah untuk
+menguraikan data sedemikian rupa agar dapat melihat pola di dalamnya dan
+memahaminya.
+Model yang banyak digunakan di ML untuk interpretasi gambar adalah
+Convolutional Neural Network (CNN). CNN serupa dengan Artificial Neural
+Network (ANN) tradisional karena terdiri dari neuron yang mengoptimalkan diri
+melalui pembelajaran. Setiap neuron akan menerima masukan dan melakukan
+operasi dasar dari ANN. Dari masukan vektor gambar mentah hingga keluaran
+akhir berupa skor kelas, seluruh jaringan akan mengkalkulasi ulang bobot (weight).
+3
+Lapisan terakhir akan mengandung loss function yang terkait dengan kelas. CNN
+terdiri dari tiga lapisan yaitu lapisan convolutional, lapisan pooling, dan lapisan
+fully-connected. Arsitektur sederhana CNN untuk klasifikasi MNIST
+digambarkan pada Gambar 1.1.
+Gambar 1.1. Arsitektur CNN yang terdiri dari lima lapisan
+You Only Look Once adalah jaringan CNN yang secara simultan
+memprediksi bounding boxes dan probabilitas kelas dari masing-masing bounding
+box. YOLO dilatih pada gambar penuh dan secara langsung meningkatkan
+performa deteksinya. Berbeda dengan teknik sliding window dan region proposal,
+YOLO melihat gambar secara keseluruhan ketika proses belajar dan pengetesan
+sehingga secara implisit mampu mendapatkan informasi kontekstual dari setiap
+kelas. YOLO mempelajari representasi objek dengan representasi yang dapat
+digeneralisasi. Ketika dilatih dengan gambar-gambar alam dan diuji pada bidang
+seni, YOLO mengungguli metode deteksi lain seperti DPM dan R-CNN dengan
+selisih yang signifikan. Kemampuan menggeneralisasi inilah yang membuat YOLO
+mempunyai kemungkinan kecil untuk mengalami kegagalan saat diterapkan pada
+domain yang baru.
+Untuk dapat menerapkan YOLO secara real-time, diperlukan kamera untuk
+menangkap gambar yang nantinya akan diproses menggunakan algoritma YOLO
+dan MiDaS. Melihat kedalaman 3D adalah permasalahan dasar dalam computer
+vision dan menjadi hal yang penting dalam scene understanding dan rekonstruksi
+3D. Estimasi urutan tampilan objek dari gambar tunggal monocular merupakan hal
+4
+yang sulit, dan perlu memperhitungkan struktur global dari gambar tersebut serta
+pengetahuan mengenai gambar tersebut. Mixed Data Supervision (MiDaS)
+adalah salah satu model yang digunakan untuk memperkirakan posisi urutan
+tampilan dari gambar monocular, yang berarti model ini dapat memprediksi urutan
+tampilan dari satu gambar saja tanpa perlu menggunakan dua gambar seperti pada
+gambar stereo. MiDaS menggunakan zero-shot cross-dataset transfer yang mana
+melatih sebuah model pada dataset tertentu dan melakukan testing pada dataset
+yang lain yang belum pernah dilihat selama proses belajar. Setelah evaluasi
+terhadap enam dataset berbeda, MiDaS mampu melebihi model yang sudah ada
+secara kualitas dan kuantitas serta menjadi state of the art baru untuk estimasi
+urutan tampilan monocular.
+Perumusan Masalah
+Permasalahan yang diidentifikasi dalam tugas akhir ini berkaitan dengan
+kebutuhan untuk meningkatkan persepsi visual dokter selama melakukan prosedur
+telesurgery. Akar permasalahannya adalah bahwa saat ini, dokter yang melakukan
+telesurgery mengalami kesulitan visual bila hanya mengandalkan gambar 2D,
+sehingga bisa mengakibatkan miskoordinasi dalam menggerakkan lengan robot
+pembantu. Oleh karena itu, permasalahan utama yang dibahas adalah bagaimana
+membantu dokter memperoleh pemahaman yang lebih baik terhadap kondisi dan
+lingkungan selama telesurgery berlangsung.
+Pendekatan penyelesaian yang diusulkan untuk mengatasi permasalahan ini
+adalah dengan mengimplementasikan sistem deteksi dan estimasi urutan tampilan
+menggunakan model YOLOv8 dan MiDaS. Melalui pendekatan ini, sistem mampu
+mendeteksi objek dan memprediksi urutan tampilan antar objek. Informasi visual
+tersebut diharapkan dapat membantu dokter dalam memahami kondisi visual secara
+lebih menyeluruh, sehingga meningkatkan koordinasi gerakan saat mengendalikan
+lengan robot dari jarak jauh. Dengan demikian, pendekatan ini bertujuan untuk
+meningkatkan akurasi dan keselamatan selama telesurgery.
+Pendekatan penyelesaian ini akan membatasi cakupan permasalahan pada
+pengembangan sistem untuk mendeteksi objek dan estimasi urutan tampilan, yang
+5
+dianggap langkah kritis dalam membantu dokter operator telesurgery menangkap
+lebih banyak informasi visual selama proses telesurgery. Dengan mengatasi akar
+permasalahan ini, diharapkan dapat memberikan kontribusi dalam bidang
+kesehatan.
+I.1.1. Batasan Masalah
+Berikut batasan masalah yang digunakan dalam penelitian ini:
+1. Batasan mencakup pengembangan sistem deteksi dan estimasi urutan
+tampilan menggunakan model YOLOv8 dan model MiDaS.
+2. Evaluasi sistem akan berfokus pada tingkat presisi dan waktu inferensi
+dalam mendeteksi alat operasi dan mengestimasi urutan tampilan antar
+elemen tersebut.
+3. Penelitian ini tidak akan membandingkan sistem yang diusulkan dengan
+teknik lain yang mungkin digunakan dalam konteks yang sama. Fokusnya
+adalah pada pengembangan sistem itu sendiri.
+4. Penelitian ini akan mempertimbangkan keterbatasan teknologi kamera
+digital, model YOLOv8, dan model MiDaS yang mungkin mempengaruhi
+kinerja sistem.
+Batasan-batasan ini akan membantu mengarahkan penelitian untuk
+mencapai tujuan penyelesaian masalah yang lebih tepat dan fokus dalam
+konteks pengembangan robot pembantu dokter untuk operasi bedah ringan.
+Tujuan Penelitian
+Tujuan dari penelitian ini adalah mengembangkan sistem deteksi dan
+estimasi urutan tampilan dalam konteks penggunaan untuk membantu dokter
+operator telesurgery memperoleh lebih banyak informasi visual. Lebih khusus,
+tujuan utama adalah:
+1. Membangun sistem yang mampu mengidentifikasi dan melacak lokasi alat
+bedah.
+2. Membangun sistem yang mampu mengestimasi urutan tampilan antara alat
+bedah yang satu dengan yang lainnya.
+6
+3. Mendapatkan evaluasi hasil kerja kombinasi model deteksi objek dan
+estimasi urutan tampilan terbaik menggunakan YOLOv8 dan MiDaS.
+Manfaat Penelitian
+Manfaat dari penelitian ini adalah:
+1. Peningkatan akurasi dan presisi dalam prosedur telesurgery dengan
+memungkinkan dokter untuk memiliki pemahaman yang lebih baik tentang
+lokasi alat bedah.
+2. Dokter operator telesurgery dapat bekerja dengan presisi tinggi, menghemat
+waktu operasi, dan meminimalkan kerugian potensial yang dapat terjadi
+selama prosedur.
+3. Penelitian ini akan memberikan kontribusi dalam pengembangan teknologi
+medis. Solusi yang diperkenalkan dalam penelitian ini dapat diterapkan
+dalam berbagai konteks telesurgery, yang pada gilirannya dapat
+memberikan manfaat bagi praktik medis secara keseluruhan.
+7
+TINJAUAN PUSTAKA
+Deteksi objek merupakan salah satu aspek penting dalam bidang computer
+vision yang memiliki banyak aplikasi. Jing dan rekan-rekannya (2024)
+mengusulkan metode YOLOFs dengan tujuan untuk meningkatkan akurasi dalam
+mendeteksi objek kecil pada gambar dengan resolusi rendah. YOLOFs
+mencapai hal ini dengan memperluas area reseptif dari jaringan, meningkatkan
+integrasi fitur, memperkuat persepsi visual, dan menggunakan modul enkoding
+fitur. Dalam berbagai eksperimen, YOLOFs terbukti unggul dalam hal akurasi rata-
+rata dalam mendeteksi objek kecil pada gambar dengan berbagai resolusi, serta
+menunjukkan kinerja yang lebih baik pada dataset COCO, VOC, dan fire. Untuk
+meningkatkan deteksi objek kecil, YOLOFs dirancang dengan tiga modul utama:
+modul fusi fitur, modul persepsi visual, dan modul enkoding fitur. Secara
+keseluruhan, jaringan YOLOFs terdiri dari tiga komponen dasar, yaitu backbone,
+neck, dan head. Penulis melakukan perbandingan performa YOLOFs dengan
+menggunakan berbagai mekanisme attention yang berbeda, seperti Transformer
+self-attention, Squeeze-and-Excitation, Coordinate attention, dan Convolutional
+Block Attention, guna memverifikasi efektivitas modul persepsi Visual yang
+diimplementasikan dalam YOLOFs. Resolusi yang digunakan untuk mengukur
+performa detektor YOLOFs adalah 704x704, 608x608, dan 512x512. Beberapa
+perbedaan antara YOLOFs dan YOLOF meliputi: YOLOFs menggunakan lapisan
+tunggal untuk merepresentasikan fitur, sedangkan YOLOFs menggunakan lapisan
+deteksi pada berbagai skala, yang memungkinkan penyimpanan informasi semantik
+yang lebih besar dan mempertahankan detail-fitur; YOLOFs mengenalkan modul
+Persepsi Visual yang unik, yang dapat meningkatkan fokus deteksi pada objek kecil
+dalam gambar dengan resolusi rendah; modul Persepsi ini tidak tersedia dalam
+YOLOF; YOLOFs menggunakan konvolusi bertautan (dilated convolution),
+sedangkan YOLOFs menggunakan konvolusi bertautan kelompok (group dilated
+convolution), yang menggabungkan keuntungan dari konvolusi bertautan dengan
+8
+kelompok, mengurangi jumlah parameter, dan mengoptimalkan komputasi dalam
+jaringan, sehingga memperbaiki efisiensi secara signifikan.
+Dong Hyun Lee (2021) mengusulkan sebuah algoritma berbasis Convolutional
+Neural Network (CNN) untuk deteksi dan pelacakan objek dalam video.
+Algoritma yang diusulkan ini menggabungkan secara efisien deteksi objek dan
+pelacakan visual, yang dapat dilatih dengan hanya beberapa gambar statis dari
+target yang ada. Algoritma ini diuji dalam konteks deteksi drone, yang
+menunjukkan efektivitasnya dalam mendeteksi dan melacak drone dalam video.
+Secara khusus, terdapat algoritma yang diusulkan untuk deteksi objek dan
+pelacakan video, yaitu: algoritma berbasis pelacakan (T-bias), algoritma bergantian
+(Switch), dan algoritma berbasis deteksi (D-bias).
+Algoritma D-bias menggunakan pelacakan visual hanya ketika detektor objek
+gagal menemukan kandidat objek. Algoritma T-bias memanfaatkan pelacakan
+visual setelah detektor objek memberikan hasil deteksi target. Algoritma ini
+memulai dengan menggunakan pelacakan visual untuk memprediksi bounding box
+berdasarkan hasil frame sebelumnya. Jika confidence score dari pelacakan visual
+berada di bawah ambang batas yang telah ditentukan, maka detektor objek
+digunakan untuk mendeteksi objek. Detektor objek menghitung Intersection over
+Union (IoU) antara bounding box sebelumnya dan bounding box yang diprediksi
+dari frame saat ini, lalu memilih IoU tertinggi sebagai hasil deteksi. Algoritma ini
+akan berulang kali menggunakan prediksi bounding box dari pelacakan visual
+hingga gagal, dan kemudian beralih ke detektor objek. Bounding box terbaik dari
+hasil deteksi objek digunakan sebagai hasil akhir dalam frame saat ini dan juga
+sebagai inisialisasi pelacakan visual pada frame berikutnya. Jika detektor objek
+gagal mendeteksi apapun, algoritma akan mempertahankan bounding box
+sebelumnya sebagai hasilnya. Algoritma switch, sebaliknya, memanfaatkan baik
+detektor objek maupun pelacakan visual, bergantian di setiap bingkai gambar.
+Algoritma ini memerlukan hasil deteksi awal dari detektor objek. Setelah deteksi
+awal, algoritma akan menggunakan detektor objek dan pelacakan visual secara
+bergantian. Jika hasil sebelumnya berasal dari pelacakan visual, maka algoritma
+akan menjalankan detektor objek, dan jika hasil sebelumnya berasal dari detektor
+9
+objek, maka algoritma akan menjalankan pelacakan visual. Jika detektor objek atau
+pelacakan visual gagal menemukan target dalam frame, algoritma akan kembali ke
+hasil sebelumnya. Algoritma ini dapat digunakan dengan berbagai jenis detektor
+objek dan pelacakan visual state-of-the-art, seperti YOLOv3 dan SiamRPN.
+Dataset drone yang digunakan terdiri dari data latih dan data pengujian. Untuk
+melatih detektor objek, sebanyak 904 gambar UAV tipe quadrotor dikumpulkan
+dari Microsoft Bing dan diberi label secara manual. Gambar yang dikumpulkan
+kemudian diaugmentasi dengan dua skala dan delapan sudut, menghasilkan 14.464
+gambar drone statis yang diperbesar untuk keperluan pelatihan. Untuk pengujian,
+total 38 video drone yang hanya berisi UAV tipe quadrotor dikumpulkan dari
+YouTube dan dianotasi secara manual. Dataset ini dikumpulkan dan dilabeli
+menggunakan workstation yang dilengkapi dengan CPU Intel i7-6800K dan GPU
+NVIDIA Geforce GTX 1080Ti. Dalam eksperimen, pelacak visual SiamRPN
+unggul dibandingkan dengan pelacak lainnya, dan algoritma D-bias, yang sangat
+bergantung pada deteksi objek, menujukkan kinerja terbaik secara keseluruhan.
+Algoritma ini menunjukkan potensi untuk deteksi dan pelacakan drone secara real-
+time, dengan algoritma tercepat (T-bias) yang berjalan pada kecepatan 73 frame per
+detik.
+Zhou dan rekannya (2023) telah merinci dalam sebuah penelitian perbaikan
+parameter jaringan guna mendeteksi tanaman target, khususnya fokus pada bunga
+stroberi, dengan akurat dan efisien. Jaringan yang digunakan ini mengandalkan
+susunan elemen yang ringan untuk backbone dan neck dengan konvolusi yang
+dikelompokkan, dan menggunakan lapisan konvolusi serta normalisasi batch guna
+mempercepat proses inferensi. Eksperimen yang telah dijalankan menggunakan
+beberapa dataset menunjukkan bahwa model yang telah diperbaiki ini berhasil
+mengurangi biaya komputasi, jumlah parameter, memory footprint, serta waktu
+inferensi, sambil meningkatkan mean Average Precision (mAP) dibandingkan
+dengan algoritma dasar. Algoritma yang diusulkan juga dapat diterapkan pada
+embedded system dengan daya komputasi yang terbatas, menjadikannya sesuai
+dengan skenario praktis. Sebagai dasar perbandingan dengan jaringan yang telah
+diperbaiki ini, seri YOLO dipilih.
+10
+Backbone dari jaringan yang ditingkatkan dirancang sedemikian rupa agar
+ringan, dengan inspirasi yang diambil dari jaringan klasifikasi VGG serta
+parameterisasi ulang VGG (Rep-VGG). Untuk meningkatkan bidang reseptif dan
+akurasi deteksi, cabang konvolusi 5x5 ditambahkan ke BodyConv berdasarkan
+jaringan
+Rep-VGG.
+Konvolusi
+yang
+dikelompokkan
+digunakan
+untuk
+menggantikan konvolusi standar, sehingga mengurangi komputasi yang diperlukan
+dan jumlah parameter. Lapisan konvolusional dan lapisan normalisasi batch
+terintegrasi guna mempercepat proses inferensi serta mengurangi penggunaan
+memori.
+Algoritma yang diusulkan telah diimplementasikan dan diuji pada platform
+Jetson Nano untuk memverifikasi kemampuan dan kesesuaiannya dengan
+embedded system yang memiliki daya komputasi terbatas. Dataset yang digunakan
+dalam penelitian ini mencakup tiga jenis bunga stroberi: Mengxiang, Redface, dan
+Ssanta. Gambar-gambar tersebut diambil di perkebunan stroberi yang terletak di
+Distrik Jiulongpo, Chongqing, Tiongkok, menggunakan tampilan yang direkam
+melalui pergerakan robot (UAV). Sebanyak 2.424 gambar dengan objek deteksi
+berhasil diperoleh antara pukul 14.00 hingga 17.30 pada bulan April 2022. Gambar-
+gambar ini diambil dengan menggunakan ponsel Xiaomi MI8 dengan resolusi 3024
+piksel (horizontal) x 3024 piksel (vertikal). Dataset kemudian diberi label secara
+manual dengan menggunakan LabelImg, memastikan bahwa pusat dari setiap
+bunga berada di tengah kotak pembatas. Dari dataset yang disiapkan yang telah
+disiapkan, sebanyak 81% (1.962 gambar) digunakan sebagai data pelatihan, 9%
+(219 gambar) untuk verifikasi, dan 10% (243 gambar) digunakan sebagai data
+pengujian. Algoritma telah diujicoba pada berbagai dataset, termasuk dataset bunga
+stroberi, dataset Tomato, dataset deteksi Turbin Angin, dan dataset VOC2007. Hasil
+eksperimen menunjukkan adanya peningkatan dalam mAP, recall, F1 score, dan
+waktu inferensi.
+Urutan Tampilan Tiga Dimensi
+Lee dan Park (2021) mengajukan metode untuk memperkirakan urutan
+tampilan video yang stabil secara temporer dari serangkaian gambar menggunakan
+11
+jaringan yang dikenal sebagai STAD (Stable Video Depth Estimation). Metode
+yang
+diusulkan
+mengintegrasikan
+modul
+temporal
+attention,
+operasi
+pembengkokan geometris, dan scale-invariant loss guna meningkatkan akurasi
+estimasi urutan tampilan tanpa menambahkan parameter secara signifikan. STAD
+memperbaiki estimasi urutan tampilan dalam video dengan menyertakan informasi
+temporal, memiliki implikasi praktis dalam berbagai aplikasi seperti kendaraan
+otonom, robotika, dan augmented reality. Modul temporal attention membantu
+memilih dan menyebarkan fitur temporal yang berguna, meningkatkan akurasi dan
+stabilitas estimasi urutan tampilan dalam scenes yang dinamis. Operasi
+pembengkokan geometris mempertahankan sinyal geometri selama proses estimasi
+urutan tampilan, yang krusial untuk menjaga konsistensi spasial dari perkiraan peta
+kedalaman. Scale-invariant loss mengatasi masalah ambiguitas skala yang melekat
+dalam estimasi urutan tampilan monokuler, sehingga membuat estimasi lebih dapat
+diandalkan dan dapat diterapkan dalam skenario dunia nyata. Masalah ambiguitas
+skala timbul karena satu gambar atau frame tidak memberikan informasi yang
+cukup untuk menentukan skala absolut suatu pemandangan, membuat nilai
+kedalaman yang diperkirakan bersifat relatif dan tidak memiliki skala tetap.
+Akibatnya, estimasi urutan tampilan bisa menjadi tidak akurat dan tidak konsisten
+di berbagai adegan atau frame. Untuk mengatasi ini, makalah ini mengusulkan
+penggunaan scale-invariant loss yang dihitung pada log-space nilai kedalaman.
+Arsitektur jaringan dalam makalah ini terdiri dari berbagai komponen, yaitu
+encoder, modul temporal attention, regularizer, dan decoder. Encoder dan decoder
+terdiri dari CNN 2D, sedangkan modul temporal attention dan regularizer terdiri
+dari CNN 3D. Penelitian ini menggunakan dataset KITTI (Karlsruhe Institute of
+Technology and Toyota Technological Institute) untuk evaluasi eksperimental,
+mencakup scenes dengan video objek bergerak, oklusi, dan dis-oklusi. Metode yang
+diusulkan, STAD, dibandingkan dengan metode lain seperti MonoDepth2, Neural-
+RGBD, dan Neural-RGBD dengan
+scale-invariant loss. Penulis juga
+membandingkan STAD dengan jaringan per-framenya yang disebut STAD-frame,
+untuk mengevaluasi pentingnya memanfaatkan informasi temporal. Hasilnya
+secara keseluruhan menunjukkan bahwa metode STAD mencapai peningkatan
+12
+akurasi dan stabilitas estimasi urutan tampilan dibandingkan dengan pendekatan
+yang sudah ada.
+De Guzman dan Raymond See (2023) mengajukan metode alternatif untuk
+memperkirakan urutan tampilan, yaitu Monocular Depth Estimation (MDE)
+menggunakan kamera RGB tunggal. Namun, penerapan praktisnya terbatas
+tanpa kalibrasi atau referensi kebenaran dasar untuk urutan tampilan yang
+dihasilkan. Penelitian ini mengusulkan sistem yang menggabungkan visi mesin
+menggunakan YOLO untuk mendeteksi objek dan algoritma optik lensa untuk
+menghitung jarak. Sistem ini mencapai akurasi lebih dari 90% dalam mengukur
+urutan tampilan objek di lingkungan statis dan berhasil memperkirakan jarak
+kendaraan di sekitar kendaraan yang bergerak. MDE digunakan untuk memprediksi
+jarak dengan menghasilkan peta kedalaman menggunakan kamera RGB tunggal.
+Algoritma optik lensa dihitung untuk menentukan jarak berdasarkan tinggi
+bounding box untuk menentukan lokasi objek yang dikenali, dengan variabel x, y,
+w, dan h mewakili origin, lebar, dan tinggi bounding-box. Untuk menghitung
+centroid dari suatu benda berdasarkan bounding-box-nya, digunakan rumus rata-
+rata koordinat x dan y dari bounding box.
+Metode ini melibatkan konversi input kamera dari BGR ke RGB, memulai
+model MDE, dan memotong region of interest (ROI) tertentu untuk deteksi objek.
+Kemudian, jarak aktual dan lokasi objek target dalam feed yang dipotong, dihitung
+dan disimpan. Model di sekitar dideteksi menggunakan model deteksi objek YOLO
+lain, dan nilai peta kedalaman yang sesuai diambil berdasarkan pusat massa objek.
+Jarak aktual benda-benda di sekitarnya dihitung melalui rasio dan proporsi terbalik
+menggunakan nilai acuan yang diperoleh dari jarak benda sasaran. Makalah ini
+mencatat persamaan proporsi terbalik yang digunakan dalam konteks peta
+kedalaman yang dihasilkan. Nilai yang mendekati 1 pada skala normalisasi 0-1
+mencerminkan objek yang jauh, sedangkan nilai yang mendekati 0 mencerminkan
+objek yang lebih dekat. Penelitian ini menggunakan MiDaS v2.1 Small untuk
+Monocular Depth Estimation (MDE). Berbagai dataset digunakan, termasuk
+dataset YOLOv3 MS COCO, dataset YOLOv4 Road Obstacle, dan dataset
+YOLOv4 Plate Detection. Model MDE yang digunakan berasal dari Ranftl et al.,
+13
+yang dilatih dengan lima dataset berbeda, termasuk data dari kamera stereo,
+pemindai laser, sensor cahaya terstruktur, dan film 3D.
+Jun dan rekannya (2021) mengusulkan metode estimasi urutan tampilan dalam
+sebuah adegan yang berfokus pada manusia dengan menggunakan kerangka kerja
+multi-task yang mengintegrasikan estimasi pose dan estimasi urutan tampilan.
+Metode ini memanfaatkan titik kunci yang diprediksi sebagai gantinya untuk
+ground-truth heatmaps guna menentukan fungsi loss dan pembobotan ulang fungsi
+loss untuk meningkatkan pelatihan. Kinerja estimasi urutan tampilan dievaluasi
+melalui dua protokol: protokol keseluruhan yang menilai akurasi pada keseluruhan
+peta kedalaman, dan protokol berorientasi manusia yang mengukur akurasi hanya
+pada wilayah yang mengandung manusia. Algoritma yang diusulkan memberikan
+hasil estimasi yang sebanding atau bahkan lebih baik dibandingkan dengan jaringan
+dasar pada dataset DIH dan HD P. Penulis menyoroti bahwa penelitian sebelumnya
+terutama berfokus pada perancangan arsitektur jaringan yang lebih baik dan
+merumuskan fungsi loss yang efektif untuk estimasi urutan tampilan. Mereka juga
+mendiskusikan upaya untuk meningkatkan kinerja melalui penerapan regresi
+ordinal, penerapan pembatasan geometris, pemisahan fitur tingkat rendah dan
+tinggi, serta penyeimbangan bobot untuk beberapa fungsi loss. Dalam makalah ini,
+ditekankan kegunaan informasi mendalam dalam memberikan petunjuk tentang
+informasi terkait sebuah adegan, seperti permukaan normal dan label segmentasi
+semantik. Disebutkan bahwa penelitian ini mengembangkan algoritma yang
+menangani estimasi urutan tampilan bersamaan dengan tugas terkait lainnya.
+Dataset
+NYUv2
+digunakan
+untuk
+evaluasi
+estimasi
+urutan
+tampilan,
+membandingkan hasilnya menggunakan algoritma dan jaringan yang berbeda.
+Evaluasi kuantitatif dan kualitatif dilakukan menggunakan dataset DIH dan dataset
+HD P, yang memiliki jumlah dan jenis titik kunci yang berbeda. Penelitian ini
+melakukan pemrosesan data untuk mencocokkan label pose dan kedalaman dari
+kedua dataset ini. Dataset MPII juga disebutkan, menyediakan 16 label untuk titik
+kunci, dan label pada dataset DIH dicocokkan dengan label pada dataset MPII
+dengan beberapa modifikasi. Makalah ini juga mencatat penggunaan peta
+kedalaman dari spesifikasi perangkat keras Kinect 2 untuk dataset DIH, serta
+14
+penggunaan masking manual untuk wilayah yang tidak valid pada dataset HD P.
+Wilayah yang tidak valid di peta kedalaman diisi menggunakan skema pewarnaan.
+Hasilnya menunjukkan bahwa algoritma yang diusulkan memberikan skor d1 yang
+lebih tinggi dan nilai RMSE yang lebih rendah dibandingkan dengan estimator lain,
+seperti estimator Chen dkk dan ResNet-50 pada dataset yang berbeda. Uji statistik
+menggunakan uji peringkat Wilcoxon memperkuat bahwa algoritma yang
+diusulkan meningkatkan kinerja estimasi dibandingkan dengan baseline untuk
+semua metrik evaluasi.
+Visi Komputer untuk Operasi
+Boonkong dan rekannya (2022) menerapkan deep learning untuk mendeteksi
+instrumen bedah dalam bedah laparoskopi dengan tujuan meningkatkan keamanan
+dan akurasi sistem bedah robotik. Beberapa model deep learning seperti Faster-
+RCNN, SSD, CenterNet, EfficientDet, dan YOLOv4 dievaluasi menggunakan
+metrik presisi, recall, dan F1-score. Dataset yang digunakan untuk melatih model
+adalah dataset COCO 2017, yang banyak digunakan untuk tugas deteksi objek.
+Proses pelatihan berlangsung selama 5.000 epochs, dengan beberapa model
+mencapai konvergensi setelah melewati 3.000 epochs. Pada setiap model,
+ditentukan confidence threshold yang paling optimal untuk memaksimalkan F1-
+score, sekaligus menyeimbangkan presisi dan recall. Hasil penelitian menunjukkan
+bahwa setiap model menunjukkan kinerja yang baik, namun YOLOv4 menonjol
+karena memberikan hasil yang sangat baik untuk ketiga metrik akurasi.
+Tak jauh berbeda dari Boonkong, Lin dan rekan-rekannya (2023) mengusulkan
+deteksi real-time berbasis visi dari tiga instrumen bedah dasar dalam bedah
+laparoskopi menggunakan computer vision. Algoritma Template Matching dan
+Deep Learning dibandingkan untuk deteksi instrumen, dengan model YOLOv5
+menunjukkan performa terbaik secara keseluruhan dalam hal presisi dan waktu
+deteksi. Masing-masing algoritma dioptimalkan dengan Template Matching
+menggunakan metode seperti menyederhanakan library template, menurunkan
+resolusi gambar, dan menggunakan Normalized Cross-correlation (NCC) untuk
+evaluasi guna meningkatkan efisiensi. Pada bagian Deep Learning, loss functions
+15
+yang berbeda (CIoU dan EIoU) dan mekanisme Attention (SENet dan CANet)
+diperkenalkan untuk meningkatkan kinerja deteksi. Jaringan YOLOv5 yang dipilih
+dalam makalah ini mewakili model deteksi objek single-stage (SSOD) yang dikenal
+karena kecepatan dan universalitasnya. Dataset dibuat dengan anotasi yang ketat
+dan terdiri dari kait koagulasi elektrik, tang bedah, dan tang oval. Model YOLOv5
+dengan CIoU dan SENet menunjukkan performa terbaik secara keseluruhan dengan
+presisi 0,98 dan waktu deteksi sekitar 20 ms. Penggunaan mekanisme Attention
+pada jaringan diterapkan untuk meningkatkan kinerja deteksi, dan hasilnya
+menunjukkan bahwa D2 mampu mengenali tang bedah dengan rata-rata waktu 43,0
+dan tingkat pengenalan sebesar 0,717.
+Dias dan rekan-rekannya (2022) melakukan studi kelayakan penggunaan visi
+komputer pada video bedah untuk mengekstrak metrik gerak tim yang dapat
+membedakan tim dengan situational awareness (SA) yang baik dari tim yang
+memiliki SA yang kurang baik. Temuan menunjukkan bahwa memungkinkan
+untuk mengekstrak metrik gerak tim bedah menggunakan kamera OR, dan entropi
+digunakan sebagai ukuran organisasi tim yang dapat memisahkan tim dengan SA
+yang baik dan tim dengan SA yang kurang baik. Hasil ini mendukung potensi
+integrasi metrik gerak berbasis visi komputer dengan penilaian kinerja berbasis
+observasi tradisional di ruang operasi. Analisis visi komputer diterapkan pada video
+selama waktu istirahat sebelum sayatan. Perangkat lunak open-source OpenPose
+1.4.0 digunakan untuk mengekstrak titik kunci tubuh 2D dari semua anggota tim
+dengan kamera OR berkecepatan 30 frame per detik. Perangkat lunak ini
+menggunakan jaringan konvolusional multi-stage untuk memprediksi lokasi bagian
+tubuh dan Part Affinity Fields (PAF) yang mengkodekan tingkat hubungan antar
+bagian. Analisis statistik, termasuk uji Kolmogorov-Smirnov dan uji non-
+parametrik Mann-Whitney U, dilakukan untuk membandingkan tim dengan SA
+buruk dan tim dengan SA baik. Perbedaan gerakan tim bedah antara tim dengan SA
+yang baik dan tim dengan SA yang buruk tidak menunjukkan signifikansi secara
+statistik. Namun, perbedaan nilai entropi antara kedua tim menunjukkan perbedaan
+yang signifikan secara statistik.
+16
+DASAR TEORI
+Dalam evolusinya, terdapat dua pendekatan dalam mendeteksi objek dan
+mengestimasi urutan tampilan. Pendekatan awalnya adalah pendekatan tradisional
+seperti metode berbasis Histogram dan ambang, berbasis kontur, deteksi
+tepi, deteksi warna, Template Matching, dan deteksi berdasarkan fitur
+geometris. Sementara itu, pendekatan kedua melibatkan deep learning, di mana
+metodenya menggunakan model kecerdasan buatan yang terlatih dengan kumpulan
+data. Beberapa model dalam pendekatan kedua mencakup Faster R-CNN, SSD
+(Single Shot Multibox Detector), Mask R-CNN, dan YOLO. Dalam
+penelitian ini, kami akan menggunakan YOLOv8 dan MiDaS untuk deteksi objek
+serta estimasi urutan tampilan melalui depth map.
+Deep Learning
+Deep Learning adalah bagian khusus dari pembelajaran mesin, sebuah
+metode baru untuk memahami representasi data yang menitikberatkan pada
+pembelajaran bertahap dari representasi yang semakin bermakna. Kata “deep”
+dalam “deep learning” tidak merujuk pada pemahaman yang lebih mendalam yang
+dicapai oleh pendekatan tersebut; sebaliknya, itu mencerminkan konsep lapisan
+berturut-turut dari representasi. Kedalaman model merujuk pada jumlah lapisan
+yang berkontribusi pada model data. Alternatif nama untuk bidang ini bisa menjadi
+pembelajaran representasi berlapis atau pembelajaran representasi hierarkis. Dalam
+deep learning modern, semuanya dipelajari secara otomatis melalui paparan data
+pelatihan. Di sisi lain, pendekatan lain dalam pembelajaran mesin cenderung
+memusatkan perhatian pada pembelajaran satu atau dua lapisan representasi data
+(seperti mengambil histogram piksel dan menerapkan aturan klasifikasi), dan oleh
+karena itu, sering disebut sebagai pembelajaran dangkal.
+Dalam ranah deep learning, representasi berlapis ini diperoleh melalui
+penggunaan model yang dikenal sebagai jaringan saraf, yang tersusun dalam
+17
+lapisan-lapisan secara harfiah yang ditumpuk satu di atas yang lain. Penggunaan
+istilah “jaringan saraf” merujuk pada bidang neurologi, tetapi meskipun beberapa
+konsep kunci dalam deep learning terinspirasi dari pemahaman kita tentang otak
+(khususnya korteks visual), model deep learning tidak mencerminkan model otak.
+Tidak ada bukti bahwa otak menggunakan mekanisme pembelajaran yang serupa
+dengan yang diterapkan dalam model deep learning modern. Meskipun mungkin
+terdapat artikel pop-sains yang menyatakan bahwa deep learning beroperasi secara
+serupa dengan otak atau dibuat meniru otak, namun hal tersebut tidaklah benar.
+Mempertimbangkan deep learning memiliki kaitan dengan neurobiologi dapat
+menimbulkan kebingungan dan tidak produktif bagi mereka yang baru memasuki
+bidang ini. Deep learning adalah suatu kerangka matematis untuk memahami
+representasi dari data.
+You Only Look Once (YOLO)
+Deteksi objek secara real-time merupakan komponen yang sangat penting
+dalam berbagai bidang. Salah satu framework yang sangat umum digunakan untuk
+mendeteksi objek adalah framework You Only Look Once (YOLO). YOLO pertama
+kali muncul pada tahun 2015 dengan versi YOLOv1, dan yang terbaru adalah
+YOLOv8. Gambar 3.1 menunjukkan garis waktu perkembangan dari YOLOv1
+sampai YOLOv8.
+Gambar 3.1. Linimasa perjalanan versi You Only Look Once
+18
+Dari versi 1 hingga versi 8, YOLO telah banyak digunakan dalam berbagai
+aplikasi. YOLO digunakan untuk memprediksi pose dalam kelompok orang,
+memprediksi objek kecil untuk kendaraan otonom, mendeteksi tumor otak,
+mendeteksi sel darah, dan mendeteksi keretakan jembatan.
+III.2.1. Mean Average Precision
+Dalam konteks deteksi objek, terdapat dua istilah yang dikenal, yaitu Mean
+Average Precision (mAP) dan Non-Maximum Supression (NMS). Mean Average
+Precision adalah metrik yang sering digunakan untuk menilai kinerja sebuah model,
+dihitung dengan menggunakan kurva precision-recall. Untuk mencocokkan ground
+truth dengan prediksi, Intersection Over Union (IoU) digunakan sebagai metrik.
+Nilai threshold IoU dapat ditentukan untuk menentukan validitas deteksi objek:
+• IoU sama dengan 1 jika ground truth sepenuhnya tumpeng tindih dengan
+prediksi.
+• IoU lebih besar dari threshold jika luas yang ditutupi oleh kotak prediksi
+dan ground truth lebih besar dari nilai threshold IoU, dianggap valid dan
+diklasifikasikan sebagai True Positive (TP).
+• IoU lebih kecil dari threshold jika luas yang ditutupi oleh kotak prediksi dan
+ground truth lebih kecil dari nilai threshold IoU, dianggap tidak valid dan
+diklasifikasikan sebagai False Positive (FP).
+• Terdapat ground truth pada gambar tetapi tidak ada prediksi, kasus ini
+diklasifikasikan sebagai False Negative (FN).
+Precision dijelaskan sebagai persentase prediksi benar oleh algoritma
+terhadap total keseluruhan prediksi, dihitung dengan rumus:
+Precision = ∑
+𝟙
+𝑛
+𝑖=1 [𝑓(𝑥𝑖) = 1 ∧𝑦𝑖= 1]
+∑
+𝟙
+𝑛
+𝑖=1 [𝑓(𝑥𝑖) = 1]
+(3.1)
+Sementara itu, recall merepresentasikan persentase prediksi benar terhadap
+seluruh ground truth oleh algoritma, dihitung dengan rumus:
+19
+Recall = ∑
+𝟙
+𝑛
+𝑖=1 [𝑓(𝑥𝑖) = 1 ∧𝑦𝑖= 1]
+∑
+𝟙
+𝑛
+𝑖=1 [𝑦𝑖= 1]
+(3.2)
+Akurasi model diukur dengan menggunakan Average Precision (AP) yang
+diestimasi melalui kurva precision-recall. Perbandingan antara berbagai model
+deteksi objek dapat dilakukan menggunakan AP karena memberikan metrik
+numerik, membuat perbandingan menjadi lebih mudah. AP dihitung secara efektif
+dengan menginterpolasi presisi melalui semua nilai recall r yang unik k, seperti
+yang diusulkan dalam Pascal VOC Challenge 2010.
+𝐴𝑣𝑒𝑟𝑎𝑔𝑒 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛= ∑𝑃𝑖(𝑟𝑘)
+𝑘=0
+(3.3)
+𝑃𝑖(𝑟𝑘) = max(𝑝(𝑘̂))
+(3.4)
+Di mana 𝑃𝑖(𝑟𝑘) merupakan interpolasi presisi yang menghasilkan presisi
+maksimum pada semua recall yang lebih besar dari k. Adapun mean Average
+Precision (mAP) adalah rata-rata AP dari seluruh representasi kelas dan dapat
+dihitung dengan formula berikut:
+𝑚𝐴𝑃= ∑
+𝐴𝑃(𝑖)
+𝐶
+𝑖=1
+𝐶
+(3.5)
+Rata-rata tertimbang dari AP digunakan apabila terdapat perbedaan jumlah
+sampel di setiap kelas. Untuk semua kelas C, bobot 𝑤𝑖 diberikan berdasarkan
+jumlah sampel kelas. Semua bobot akan dijumlahkan menjadi satu.
+𝑊𝑒𝑖𝑔ℎ𝑡𝑒𝑑 𝑚𝐴𝑃= ∑
+𝑊𝑖𝐴𝑃(𝑖)
+𝐶
+𝑖=1
+𝐶
+(3.6)
+Kurva precision-recall membantu mengidentifikasi nilai ambang batas
+terbaik untuk deteksi dengan membuat plot precision dan recall untuk nilai ambang
+batas yang berbeda. Area yang dicakup oleh kurva precision-recall adalah indikator
+kinerja lain. Semakin luas wilayah yang dicakup, semakin tinggi pula precision dan
+recall-nya.
+III.2.2. Non-Maximum Suppression
+Non-Maximum Suppression (NMS) merupakan algoritma pascaproses yang
+umumnya digunakan dalam deteksi objek untuk menggabungkan sejumlah prediksi
+20
+objek menjadi satu prediksi yang lebih akurat. NMS membantu mengatasi tumpeng
+tindih antara kotak pembatas, sehingga memilih kotak pembatas dengan nilai
+kepercayaan tertinggi untuk setiap objek dalam gambar. NMS memiliki peran
+krusial dalam tiga tahap deteksi objek, yang melibatkan proposisi ruang pencarian
+dalam kotak pembatas, penyempurnaan kotak pembatas melalui proses
+pengklasifikasian, dan penggabungan kotak pembatas yang memprediksi objek
+yang sama. Proses kerja dari NMS dapat dijelaskan sebagai berikut:
+1. Input: Sekumpulan kotak pembatas yang telah dihasilkan oleh algoritma
+deteksi objek, masing-masing dilengkapi dengan nilai kepercayaan
+prediksi.
+2. Pengurutan: Kotak pembatas diurutkan berdasarkan nilai kepercayaan
+prediksinya dari tertinggi ke terendah.
+3. Seleksi: Dimulai dari kotak pembatas dengan nilai kepercayaan tertinggi,
+NMS mempertahankan kotak tersebut dan menghapus kotak-kotak lain
+yang memiliki tumpang tindih signifikan dengan kotak yang telah dipilih.
+4. Iterasi: Langkah 3 diulang untuk kotak pembatas berikutnya dengan nilai
+kepercayaan yang lebih rendah, dan proses ini terus berlanjut hingga semua
+kotak pembatas dievaluasi.
+5. Output: Hasil akhir berupa subset kotak pembatas yang dipilih oleh NMS
+berdasarkan nilai kepercayaan tertinggi.
+Dengan menerapkan NMS, diharapkan hasil deteksi objek lebih akurat dan
+bebas dari redundansi.
+III.2.3. Arsitektur
+Seri algoritma YOLO merupakan algoritma dengan satu tahap dalam
+deteksi objek. Gambar yang diinputkan ke dalam jaringan dapat mengestimasi
+seluruh batas yang mungkin sekaligus, sehingga lebih cepat dibandingkan dengan
+algoritma yang memiliki dua tahap. Algoritma YOLO terus diperbarui dan
+dikembangkan, dengan versi terbarunya yaitu YOLOv8. Algoritma YOLOv8
+memiliki lima varian, yaitu YOLOv8n, YOLOv8s, YOLOv8m, YOLOv8l, dan
+YOLOv8x, yang disusun dari yang paling ringan hingga yang paling kompleks
+21
+tergantung pada kedalaman jaringan. Dalam hal kecepatan deteksi dan akurasi,
+YOLOv8 telah mengungguli YOLOv5 dan YOLOv7. Gambar 3.2 menunjukkan
+struktur jaringan dari model YOLOv8.
+Gambar 3.2. Jaringan model YOLOv8
+Jaringan YOLOv8 telah dijelaskan secara luas, meskipun tidak ada makalah
+formal yang mendukungnya. Head dari YOLOv8 menggunakan Decoupled-Head
+dengan cabang-cabang berbeda untuk komputasi, yang membantu meningkatkan
+kinerja. Pendekatan berbasis anchor yang digunakan pada versi sebelumnya diganti
+dengan pendekatan yang tidak bergantung pada anchor. Backbone masih
+menggunakan teknik modul CSP dan SPFF dari YOLOv5, tetapi modul C3
+22
+digantikan oleh modul C2f yang memiliki aliran gradien lebih kaya, menghasilkan
+bobot yang lebih ringan. YOLOv8 menghapus struktur konvolusional dalam fase
+upsampling PAN-FPN YOLOv5 dan menggantikan modul C3 dengan modul C2f.
+Sebagai tambahan, augmentasi data pada YOLOv8 ketika proses pelatihan
+memperkenalkan operasi augmentasi Mosaic untuk 10 epoch terakhir. Loss
+klasifikasi diubah menjadi VFL Loss, dan Loss CIOU ditambahkan dengan DFL
+(Distribution Focal Loss) sebagai loss regresi. YOLOv8 juga menggantikan
+pencocokan IOU dengan pencocokan Task-Aligned Assigner.
+Depth Map
+Peta kedalaman atau depth map merupakan representasi visual yang
+menggambarkan informasi mengenai urutan tampilan antara objek-objek dalam
+suatu gambar. Secara sederhana, peta kedalaman menyajikan data tentang sejauh
+apa setiap piksel dalam gambar dari kamera atau mata pengamat. Artinya, peta
+kedalaman mengindikasikan perbedaan jarak antara objek-objek yang terpantau
+dalam gambar. Peta kedalaman dari gambar RGB banyak diaplikasikan dalam
+berbagai bidang, seperti robotika, kendaraan otonom, pengenalan objek,
+pemahaman adegan, pemodelan 3D, animasi, augmented reality, kontrol industri,
+dan diagnosis medis. Stereo matching merupakan metode tradisional yang paling
+banyak dieksplorasi karena kemiripannya dengan sistem binokular manusia.
+Berkaitan dengan peta kedalaman terdapat istilah jarak relatif yaitu representasi
+urutan tampilan objek dalam suatu gambar yang tidak memiliki satuan fisik absolut
+(seperti meter atau centimeter), melainkan menunjukkan urutan atau perbandingan
+kedalaman antar objek dalam adegan. Dengan kata lain, semakin besar nilai piksel
+pada depth map, maka semakin jauh(atau dekat, tergantung arah encoding model)
+objek tersebut dari kamera.
+Generasi pertama dari estimasi urutan tampilan berbasis metode stereo
+melibatkan pencocokan piksel dari berbagai gambar yang diambil dari kamera
+dengan kalibrasi yang akurat. Meskipun teknik ini dapat memberikan hasil yang
+memuaskan, namun masih memiliki keterbatasan dalam beberapa aspek. Sebagai
+contoh, metode ini tidak efektif ketika menghadapi daerah oklusi, daerah tanpa
+23
+fitur, atau daerah yang sangat bertekstur dengan pola berulang. Menariknya,
+manusia mampu mengatasi masalah ini berkat pengetahuan sebelumnya. Sebagai
+contoh, kita dapat dengan mudah menyimpulkan perkiraan ukuran objek, lokasi
+relatifnya, dan bahkan perkiraan jarak relative terhadap kita. Kemampuan ini
+dimungkinkan oleh pengalaman visual sebelumnya yang memungkinkan kita
+membangun pengetahuan dan mengembangkan model mental tentang bagaimana
+dunia 3D terlihat.
+Beberapa metode algoritma stereo matching melibatkan Block Matching
+(BM), Block Matching dengan Dynamic Programming (BMDP), Belief
+Propagation (BP), Gradient Feature Matching (GF), dan Histogram of Oriented
+Gradient (HOG). Bila diberikan dua gambar yang diambil dari kamera dengan
+posisi horizontal yang berbeda, diharapkan untuk menghitung disparitas (d) untuk
+setiap piksel di gambar kiri. Disparitas merujuk pada perbedaan lokasi horizontal
+sebuah objek di gambar sebelah kiri dan gambar sebelah kanan. Sebuah objek
+berposisi (x, y) di gambar kiri berada di posisi (x – d, y) pada gambar kanan. Jika
+disparitas dari sebuah objek diketahui, kedalamannya dapat dihitung dengan
+persamaan berikut:
+𝑧= 𝑓𝐵
+𝑑
+(3.7)
+di mana f merupakan panjang fokus (focal length) dari kamera, dan B adalah jarak
+antara pusat kamera. Tipikal dari sebuah algoritma stereo adalah dengan memulai
+menghitung biaya pencocokan (matching cost) pada setiap posisi p untuk seluruh
+disparitas d yang sedang dipertimbangkan. Sebuah metode sederhana untuk
+menghitung biaya pencocokan adalah penjumlahan dari perbedaan absolut:
+𝐶𝑆𝐴𝐷(𝒑,𝑑) = ∑|𝐼𝐿(𝒑) −𝐼𝑅(𝒒−𝒅)|
+𝑞∈𝒩𝑝
+(3.8)
+di mana 𝐼𝐿(𝒑) dan 𝐼𝑅(𝒑) adalah intensitas gambar pada posisi p di gambar kiri dan
+gambar kanan. 𝒩𝑝 adalah set lokasi dengan jendela persegi tetap berpusat pada
+p.
+24
+III.3.1. Monocular Depth Estimation
+Kemampuan untuk memperoleh pemahaman peta kedalaman dari sebuah
+gambar tunggal membuka berbagai kemungkinan kreatif, seperti menampilkan
+gambar dalam format 3D, menciptakan efek fokus lembut, dan berpotensi
+membantu dalam pemahaman suatu adegan. Pemahaman ini juga dapat diterapkan
+dalam aplikasi robotika, seperti navigasi otonom, meskipun umumnya kendaraan
+otonom atau konvensional dilengkapi dengan lebih dari satu kamera dan sensor
+jarak, yang dilengkapi dengan kemampuan visi komputer. Deep neural network
+didesain untuk memprediksi peta kedalaman dari gambar tunggal. Perbedaan antara
+prediksi dan kedalaman sesungguhnya digunakan untuk memperbaiki proses
+pelatihan jaringan menggunakan fungsi kehilangan L₂ (L₂ Loss Function) yang
+dirumuskan sebagai berikut:
+ℒ2(𝑑, 𝑑∗) = 1
+𝑁∑‖𝑑−𝑑∗‖2
+2
+𝑁
+𝑖
+(3.9)
+dari persamaan diatas, depth networks dapat belajar mengenai informasi kedalaman
+dari adegan dengan mengaproksimasi ground truth.
+Memprediksi peta kedalaman dari suatu gambar tunggal dapat dilakukan
+melalui penerapan jaringan dalam skala ganda. Pendekatan ini memanfaatkan
+informasi multi-skala dan memperkenalkan konsep regresi langsung pada piksel
+untuk memprediksi kedalaman. Jaringan ini terdiri dari dua komponen, di mana
+yang pertama bertugas mengestimasi struktur global dari adegan, sedangkan yang
+kedua mengolah estimasinya untuk mendapatkan informasi lokal. Penggunaan
+skala error yang bersifat independen menggunakan scale-invariant loss. Global
+Coarse-Scale Network memprediksi keseluruhan struktur peta kedalaman
+menggunakan pandangan global dari adegan. Jaringan ini bertanggung jawab untuk
+menangani titik hilang, lokasi objek, dan penyelarasan ruangan. Jaringan ini terdiri
+dari lima lapisan ekstraksi fitur konvolusi dan max-pooling diikuti oleh dua lapisan
+FC. Keluaran dari jaringan ini memiliki resolusi ¼ dibandingkan masukannya.
+Jaringan kedua adalah Local Fine-Scale Network, tugas jaringan ini adalah
+melakukan penyempurnaan lokal. Jaringan ini menangani detail seperti objek dan
+25
+tepi dinding. Jaringan ini terdiri dari tiga lapisan konvolusi dengan fitur coarse yang
+digabungkan ke blok kedua. Beberapa dataset yang sering digunakan melatih
+model untuk memprediksi peta kedalaman dari gambar tunggal adalah KITTI
+dataset, Cityscapes dataset, dan Make3D dataset.
+III.3.2. Scale-Invariant Error
+Scale-invariant error digunakan untuk mengukur hubungan titik-titik dalam
+suatu adegan, tanpa memperhatikan skala absolut global. Untuk prediksi peta
+kedalaman y dan ground truth y*, masing-masing dengan n piksel berindeks i, error
+mean-squared yang invarian terhadap skala dapat didefinisikan sebagai berikut:
+𝐷(𝑦, 𝑦∗) = 1
+𝑛∑(log 𝑦𝑖− log 𝑦𝑗
+∗+  𝛼(𝑦,𝑦∗))2
+𝑖=1
+(3.10)
+di mana 𝛼(𝑦, 𝑦∗) =
+1
+𝑛∑(log 𝑦𝑗
+∗− log 𝑦𝑖)
+𝑖
+adalah nilai dari 𝛼 yang meminimalkan
+error untuk (𝑦, 𝑦∗) yang diberikan. Untuk setiap prediksi y, 𝑒𝛼 adalah skala yang
+paling sesuai dengan ground truth. Seluruh skalar yang dikalikan dengan y
+memiliki error yang sama, sehingga disebut sebagai invarian terhadap skala.
+III.3.3. MiDaS
+MiDaS merupakan model pembelajaran mesin yang dapat memprediksi
+peta kedalaman dari gambar masukan. MiDaS pertama kali diperkenalkan melalui
+paper berjudul ‘Towards Robust Monocular Depth Estimation: Mixing Datasets
+for Zero-shot Cross-dataset Transfer’ oleh Ranftl dan kawan-kawan. MiDaS
+melibatkan penggunaan berbagai dataset yang berbeda sebagai bagian dari proses
+pelatihan model. Dengan memanfaatkan sejumlah dataset yang beragam, MiDaS
+mampu menghasilkan prediksi urutan tampilan untuk gambar-gambar dengan
+kondisi dan lingkungan yang bervariasi. Tabel 3.1 menampilkan dataset yang
+digunakan dalam pelatihan model MiDaS. Selain itu, MiDaS juga memanfaatkan
+dataset yang berasal dari film-film 3D, sebagaimana terlihat pada Tabel 3.2.
+Penggunaan dataset yang berbeda-beda disebut dengan ‘zero-shot cross-dataset
+transfer’.
+26
+Tabel 3.1. Dataset yang digunakan untuk melatih model MiDaS
+Dataset
+Lingkungan
+Tipe Depth
+# Gambar
+Sumber
+DIML Indoor
+Indoor
+Metric (RGB-D)
+220K
+MegaDepth
+Outdoor
+No scale
+130K
+ReDWeb
+Outdoor
+No scale & shift
+3600
+WSVD
+Indoor & Outdoor
+No scale & shift
+1.5M
+Film 3D
+Indoor & Outdoor
+No scale & shift
+75K
+—
+DIW
+Indoor & Outdoor
+Ordinal pair
+496K
+ETH3D
+Indoor & Outdoor
+Metric (Laser)
+454
+Sintel
+Indoor & Outdoor
+Synthetic
+1064
+KITTI
+Outdoor
+Metric (Laser)
+93K
+NYUDv2
+Indoor
+Metric (RGB-D)
+407K
+TUM-RGBD
+Indoor
+Metric (RGB-D)
+80K
+Tabel 3.2. Dataset film-film 3D untuk melatih model MiDaS
+Set
+Judul Film
+Jumlah Frame
+Training
+Battle of the Year (2013)
+4821
+Billy Lynn’s Long Halftime Walk (2016)
+4178
+Drive Angry (2011)
+328
+Exodus: Gods and Kings (2014)
+8063
+Final Destination 5 (2011)
+1437
+A Very Harold & Kumar 3D Christmas (2011)
+3690
+Hellbenders (2012)
+120
+The Hobbit: An Unexpected Journey (2012)
+8874
+Hugo (2011)
+3189
+The Three Musketeers (2011)
+5028
+Nurse 3D (2013)
+492
+Pina (2011)
+1215
+Dawn of the Planet of the Apes (2014)
+5571
+The Amazing Spider-Man (2012)
+5618
+Step Up 3D (2010)
+509
+Step Up: All In (2014)
+2187
+Transformers: Age of Extinction (2014)
+8740
+Le Dernier Loup / Wolf Totem (2015)
+4843
+X-Men: Days of Future Past (2014)
+6171
+Validation
+The Great Gatsby (2013)
+1815
+Step Up: Miami Heat / Revolution (2012)
+1243
+Test
+Doctor Who - The Day of the Doctor (2013)
+508
+StreetDance 2 (2012)
+280
+27
+MiDaS menggunakan arsitektur ResNet sebagai jaringannya. ResNet,
+kependekan dari Residual Networks, adalah jenis arsitektur jaringan neural dalam
+yang diperkenalkan untuk mengatasi masalah hilangnya gradien di jaringan yang
+sangat dalam. Masalah gradien hilang terjadi saat melatih jaringan saraf dalam, dan
+hal ini menyebabkan kesulitan dalam memperbarui bobot lapisan awal selama
+proses propagasi mundur. Ide utama dari ResNet adalah penggunaan blok residual,
+yang memperkenalkan jalan pintas atau shortcut koneksi yang melewati satu atau
+lebih lapisan. Jaringan tradisional mempelajari mapping langsung dari masukan ke
+keluaran. Sebaliknya, jaringan residual, mempelajari perbedaan mapping. Mapping
+asli diperoleh dengan menambahkan koneksi shortcut ke lapisan keluaran satu atau
+lebih. MiDaS mempunyai tiga varian yaitu convolutional neural network
+(CNN/Small), medium-size dense prediction transformer (DPT Hybrid), dan large
+dense prediction transformer (DPT Large). Gambar 3.3 menunjukkan
+arsitektur dari model MiDaS.
+Gambar 3.3. Arsitektur dari model MiDaS
+III.3.4. Modulation Transfer Function
+Estimasi urutan tampilan berbasis citra telah menjadi bidang penelitian yang
+penting dalam visi komputer karena perannya dalam memahami struktur spasial
+lingkungan dari informasi visual 2D. Salah satu pendekatan terkini yang menonjol
+adalah MiDaS (Mixed Depth and Scale), sebuah model berbasis deep learning yang
+dilatih menggunakan berbagai dataset kedalaman dengan skala dan domain yang
+beragam. Agar hasil estimasi urutan tampilan yang dihasilkan oleh MiDaS dapat
+dipercaya dan layak untuk digunakan dalam aplikasi nyata seperti pendeteksi alat
+bedah, perlu dilakukan evaluasi terhadap kualitas depth map tersebut. Salah satu
+metode evaluasi yang relevan adalah pendekatan Modulation Transfer Function
+28
+(MTF) yang biasa digunakan dalam pengukuran performa sistem optik dan
+pencitraan digital. MTF mengukur seberapa baik suatu sistem mampu mentransfer
+detail spasial dari objek asli ke citra hasil berdasarkan frekuensi spasial.
+Perhitungan MTF didasarkan pada dua fungsi utama, yaitu Edge Spread
+Function (ESF) dan Line Spread Function (LSF). ESF menggambarkan perubahan
+intensitas atau nilai kedalaman sepanjang garis yang tegak lurus terhadap tepi suatu
+objek. Dalam konteks depth map, ESF mencerminkan perubahan nilai kedalaman
+dari suatu objek ke latar belakang atau sebaliknya. Setelah ESF diperoleh, fungsi
+ini diturunkan secara numerik untuk mendapatkan LSF, yang mencerminkan
+sebaran nilai intensitas atau kedalaman di sepanjang arah lateral terhadap tepi.
+Selanjutnya, LSF ditransformasikan ke domain frekuensi menggunakan
+Fast Fourier Transform (FFT) untuk mendapatkan MTF. MTF ini kemudian
+dianalisis untuk mengetahui seberapa baik depth map mempertahankan ketajaman
+tepi atau struktur spasial objek. Nilai MTF berkisar antara 0 hingga 1, di mana nilai
+1 menandakan transfer kontras spasial yang sempurna dan nilai mendekati 0
+menandakan hilangnya informasi spasial. Salah satu parameter penting penting
+yang dianalisis adalah MTF50, yaitu nilai frekuensi spasial di mana MTF menurun
+hingga 50% dari nilai maksimumnya. MTF50 sering digunakan sebagai indikator
+tajamnya sistem pencitraan. Semakin tinggi nilai MTF50, semakin baik sistem
+dalam merepresentasikan detail spasial halus.
+Kamera
+Dalam memahami cara kerja kamera, kita tidak bisa lepas dari cahaya.
+Cahaya memiliki banyak arti tergantung pada konteks aplikasinya. Dalam konteks
+radiasi optik, cahaya didefinisikan sebagai gelombang elektromagnetik dengan
+panjang gelombang antara 10 nm dan 1 mm, mencakup wilayah spektrum
+ultraviolet, cahaya tampak, dan infrared. Selain itu, istilah cahaya terkadang
+digunakan sebagai sinomin dari radiasi elektromagnetik, yang melibatkan spektrum
+yang lebih luas, termasuk X-ray, gamma-ray, dan radio. Photon, sebagai kuantum
+radiasi elektromagnetik, biasanya diasosiasikan dengan satu panjang gelombang
+atau frekuensi tertentu (radiasi monokromatik). Ketika cahaya berinteraksi dengan
+29
+materi, fenomena yang terjadi bergantung pada hubungan panjang gelombang
+(frekuensi) cahaya dengan ukuran fisik (frekuensi resonansi) materi, yang terdiri
+dari atom, ion, dan molekul. Dalam konteks ini, hanya cahaya pada bagian
+spektrum cahaya tampak yang dapat merangsang reseptor visual pada mata
+manusia, yaitu spektrum dengan frekuensi antara 1014 dan 1015 𝑠−1 menampilkan
+spektrum
+elektromagnetik.
+Gambar
+3.4
+menunjukkan
+gelombang
+elektromagnetik beserta bentuk radiasi yang dihasilkan.
+Gambar 3.4. Spektrum elektromagnetik menunjukkan bentuk radiasi apa yang
+dihasilkan dari photon dengan panjang gelombang dan frekuensi berbeda
+Panjang gelombang yang berbeda dari spektrum cahaya tampak juga
+langsung mempengaruhi persepsi warna pada sistem visual manusia. Hubungan
+warna dengan panjang gelombang ini ditunjukkan dalam Tabel 3.3.
+Tabel 3.3. Dependensi warna terhadap panjang gelombang
+Rentang Panjang Gelombang (nm)
+Warna
+400 - 430
+Violet
+430 - 480
+Biru
+480 - 560
+Hijau
+560 - 590
+Kuning
+590 - 620
+Orange
+620 - 700
+Merah
+30
+Proses inti dari setiap kamera adalah mengonversi cahaya menjadi sinyal
+elektronik yang terjadi pada sensor gambar. Gambar 3.5 menunjukkan contoh
+sensor citra. Optik kamera memfokuskan cahaya menjadi gambar pada permukaan
+sensor, yang juga memiliki struktur optiknya sendiri, dan penyerapan cahaya oleh
+photon menciptakan pasangan lubang electron di semikonduktor. Efisiensi
+kuantum (QE) adalah rasio fotoelektron yang bermanfaat terhadap photon yang
+dating dan seringkali berkisar antara 50% hingga 80%. Fotoelektron dikumpulkan
+melalui difusi dan penyimpangan menjadi “sumur potensial” elektrostatik yang
+dibuat melalui doping semikonduktor secara selektif melalui implantasi ion.
+Fotoelektron terintegrasi dalam penyimpanan ini dengan baik selama pemaparan.
+Struktur fotodioda yang ditanam, ditemukan oleh Teranishi, sering digunakan pada
+sensor citra CCD dan CMOS. Pada akhir periode integrasi eksposur, sinyal domain
+muatan kemudian diubah menjadi tegangan dengan mentransfer muatan ke
+kapasitansi induk. Perubahan dalam muatan pada simpul induk ini menyebabkan
+perubahan tegangan, mengubah sinyal dari domain muatan ke domain tegangan
+(Gambar 3.6). Perubahan tegangan dapat diperkuat atau disangga oleh elektronik
+konvensional, tetapi paling sering pertama kali melalui gerbang MOSFET pengikut
+sumber. Hubungan antara perubahan tegangan keluaran dan jumlah fotoelektron
+disebut gain konversi (CG) dengan satuan volt per elektron.
+Gambar 3.5. Sensor citra CMOS
+31
+Gambar 3.6. Pembacaan sensor citra CCD dan CMOS, muatan sinyal ditransfer
+ke kapasitansi induk yang perubahan tegangannya diukur oleh sebuah penguat
+Berikut adalah langkah-langkah untuk menghasilkan gambar dari cahaya
+menggunakan kamera:
+1. Photon yang mengenai fotodetektor diubah menjadi elektron, yang disebut
+fotoelektron. Tingkat konversi ini dikenal sebagai efisiensi kuantum (QE).
+Dengan QE sebesar 50%, hanya setengah dari photon yang akan diubah
+menjadi elektron, dan sebagian informasi akan hilang.
+2. Elektron yang dihasilkan disimpan dalam lubang di setiap piksel,
+memberikan jumlah kuantitatif elektron per piksel. Jumlah maksimum
+elektron yang dapat disimpan di dalam lubang mengontrol rentang dinamis
+sensor. Hal ini dapat digambarkan sebagai kedalaman lubang atau
+kedalaman bit.
+3. Jumlah elektron per lubang diubah dari tegangan menjadi sinyal digital
+dengan menggunakan converter analog ke digital (ADC). Tingkat konversi
+ini dikenal sebagai gain. Dengan gain sebesar 1.5, 100 elektron diubah
+menjadi 150 tingkat abu-abu. Warna yang dihasilkan dari 0 elektron dikenal
+sebagai offset.
+32
+4. Sinyal digital ini disebut sebagai tingkat abu-abu dan merupakan warna
+skala abu-abu (monokrom) yang berubah-ubah. Tingkat abu-abu 1 atau 100
+tergantung jumlah elektron dalam lubang dan rentang dinamis. Jika terdapat
+100 elektron, 100 tingkat keabuan akan berwarna putih terang. Jika terdapat
+10.000 elektron, 100 tingkat keabuan akan sangat gelap.
+5. Peta tingkat abu-abu ditampilkan pada monitor komputer. Gambar yang
+dihasilkan bergantung pada pengaturan perangkat lunak, seperti kecerahan
+dan kontras. Gambar 3.7 memperlihatkan proses menghasilkan citra dari
+cahaya pada kamera saintifik.
+Gambar 3.7. Proses menghasilkan citra dari cahaya pada kamera
+Roboflow
+Roboflow merupakan platform daring yang menyediakan kumpulan fitur
+untuk membangun dan mendeploy model computer vision. Roboflow dapat
+33
+diintegrasikan pada berbagai tahapan dari pipeline pengembangan menggunakan
+API dan SDK, atau bahkan menggunakan user interface untuk mengatur proses dari
+kumpulan gambar sampai ke proses inferensi. Roboflow menawarkan fungsionality
+untuk labeling data, training model, dan mendeploy model. Roboflow juga
+menyediakan komponen untuk pengembangan solusi computer vision secara
+kustom. Roboflow Annotate adalah fitur online labeling gambar untuk berbagai
+tugas visi komputer seperti deteksi objek, klasifikasi, dan segmentation. Melabeli
+data dimulai dengan membuat projek di Roboflow. Selanjutnya, mengupload
+gambar dan annotasi yang ada ke Roboflow. Setelah mengupload, Roboflow akan
+diarahkan menuju halaman Annotate. Pilih kumpulan gambar yang diupload
+kemudian klik ‘Start Annotating’ untuk memulai labeling.
+34
+PELAKSANAAN PENELITIAN
+Alat dan Bahan Penelitian
+Penelitian ini menggunakan alat dan bahan yang terbagi menjadi perangkat
+keras dan perangkat lunak. Rincian perangkat keras dan perangkat lunak yang
+digunakan dapat dilihat pada Tabel 4.1 dan Tabel 4.2.
+Penelitian ini menggunakan perangkat keras berupa laptop dan kamera
+Samsung Galaxy A15. Laptop yang digunakan dalam penelitian ini adalah
+MacBook Air M1 2020 dengan sistem operasi macOS Sonoma dan RAM sebesar
+8 GB. Laptop ini berfungsi untuk menulis laporan penelitian, mencari literatur,
+mengolah data, menulis kode, melabeli gambar untuk pelatihan, serta menjalankan
+perangkat lunak yang digunakan dalam penelitian. Kamera digunakan untuk
+mengambil gambar yang akan digunakan sebagai data pelatihan dan data pengujian.
+Penelitian ini menggunakan kamera Samsung Galaxy A15 dengan resolusi gambar
+maksimal yang bisa diambil adalah 50 megapiksel (MP) dengan kamera utama
+belakang. Selain itu, kamera belakang juga memiliki dua lensa tambahan dengan
+resolusi 5 MP dan 2 MP yang digunakan untuk efek tambahan seperti depth sensing
+atau makro.
+Penelitian ini menggunakan beberapa perangkat lunak dan pustaka
+(library), termasuk Google Chrome, Python, Google Colab, serta berbagai pustaka
+yang mendukung proses prapemrosesan gambar. Perangkat lunak yang paling
+sering digunakan adalah Google Chrome, peramban internet yang dikembangkan
+oleh Google sejak tahun 2008. Chrome tersedia untuk berbagai sistem operasi
+seperti Windows, macOS, Linux, iOS, dan Android, dan saat ini menjadi peramban
+internet paling populer di dunia. Dalam penelitian ini, Chrome digunakan untuk
+mencari informasi terkait penelitian, mengakses Google Colaboratory sebagai
+lingkungan pengembangan untuk pelatihan model, serta mengunjungi situs
+makesense.ai untuk pelabelan gambar pada dataset.
+35
+Tabel 4.1. Daftar perangkat keras yang digunakan
+No
+Perangkat
+Spesifikasi
+1
+MacBook Air
+M1 2020
+• Memori 8 GB terintegrasi
+• SSD 256 GB
+• Sistem operasi macOS Sonoma
+• Chip Apple M1, CPU 8-core dengan 4 core
+performa dan 4 core efisiensi, GPU-7 core,
+Neural engine 16-core
+2
+Kamera
+Samsung
+Galaxy A15
+5G
+• Resolusi (Multiple): 50.0 MP + 5.0 MP + 2.0 MP,
+yang menunjukkan adanya tiga lensa dengan
+resolusi masing-masing
+• Aperture (F Number): F1.8, F2.2, F2.4
+• Mendukung auto fokus
+• Digital zoom hingga 10x
+• Terdapat lampu kilat pada kamera utama
+• Resolusi perekaman video: Full HD (FHD)
+dengan resolusi 1920 x 1080 piksel pada 30 frame
+per detik
+• Mendukung perekaman slow motion pada 120 fps
+dengan resolusi HD
+3
+Perangkat
+pendukung
+laptop
+• Charger
+• Dongle
+• Mouse
+Tabel 4.2. Daftar perangkat lunak dan pustaka yang digunakan
+No
+Perangkat lunak/Library
+Versi
+1
+Chrome
+124.0.6367.62
+2
+Python
+3.10.12
+3
+Google Colaboratory
+-
+4
+Roboflow
+-
+5
+Matplotlib
+3.7.1
+6
+Opencv-python
+4.8.0.76
+7
+Torch
+2.2.1+cu121
+8
+Pandas
+2.0.3
+9
+Numpy
+1.25.2
+36
+Google Colaboratory, atau biasa disebut Colab, adalah platform berbasis
+cloud untuk menulis, menjalankan, dan membagikan kode Python. Salah satu
+keuntungan menggunakan Colab adalah akses yang mudah melalui browser. Selain
+itu, Colab menyediakan akses ke sumber daya komputasi tingkat tinggi melalui fitur
+langganan. Gambar 4.1 menunjukkan antarmuka pengguna Colab yang terdiri dari
+bidang untuk menulis kode dan menu sidebar yang menyediakan berbagai fitur,
+seperti manajemen data dan variabel. Colab memiliki tiga tingkatan layanan
+langganan: Colab standar (gratis), Colab Pro, dan Colab Pro+. Colab juga
+mendukung pustaka Python yang dapat dikustomisasi oleh pengguna dengan
+perintah seperti ‘!pip install’ atau ‘!apt-get-install’. Selain itu, Colab mendukung
+penggunaan Markdown dan LaTex, yang memungkinkan penjelasan yang lebih
+baik serta penyertaan formula matematika dalam kode.
+Gambar 4.1. Tampilan dari Google Colaboratory
+Dalam Google Colaboratory (Colab), terdapat beberapa pustaka bawaan
+yang digunakan dalam penelitian ini, antara lain Matplotlib, OpenCV-python,
+Torch, dan Numpy. Menurut situs resmi dokumentasi Matplotlib, Matplotlib adalah
+pustaka komprehensif untuk membuat visualisasi statis, animasi, dan interaktif.
+Matplotlib mendukung berbagai jenis grafik dan plot seperti garis, batang,
+37
+histogram, lingkaran, scatter, dan heatmaps. Dalam penelitian ini, Matplotlib
+digunakan untuk membuat subplot yang memvisualisasikan gambar setelah
+mendapatkan bounding box dari deteksi objek dan setelah peta kedalaman (depth
+map) berhasil diperoleh.
+Pustaka kedua yang digunakan dalam penelitian ini adalah OpenCV-
+python, salah satu pustaka terbesar untuk visi komputer. OpenCV-python
+menyediakan berbagai fitur pemrosesan gambar dasar, seperti menampilkan
+gambar, mengubah ukuran, memotong, memutar, dan membalik gambar (flipping).
+Selain itu, pustaka ini juga mendukung deteksi dan analisis fitur, seperti deteksi
+tepi, kontur, sudut, dan garis. Untuk pemrosesan gambar lanjutan, OpenCV
+menawarkan transformasi, filtering, smoothing, deteksi objek, dan OCR. OpenCV-
+python dapat digunakan dengan bahasa pemrograman C/C++, Python, dan Java,
+dengan dukungan tidak resmi untuk Matlab, Ruby, Perl, dan Node.js. Namun, perlu
+dicatat bahwa OpenCV-python secara pre-built hanya mendukung CPU, dan versi
+terbarunya adalah 4.9.0.80. Dalam penelitian ini, OpenCV digunakan untuk
+memproses input video yang akan diprediksi objek dan kedalamannya. OpenCV
+memiliki fitur untuk mendapatkan frame-frame dari sebuah video, sehingga
+memudahkan model untuk melakukan prediksi berdasarkan frame tersebut.
+Dalam penelitian ini, framework Pytorch digunakan sebagai kerangka kerja
+untuk melatih model serta sebagai penghubung antara YOLOv8 dan MiDaS.
+Pytorch sendiri saat ini telah mengungguli kerangka kerja serupa seperti
+TensorFlow, Caffe, Theano, Keras, dan Deeplearning4j. Pytorch dapat digunakan
+di Windows, macOS, dan Linux, serta mendukung bahasa pemrograman Python,
+Java, dan C++. Dalam penelitian ini, Pytorch akan digunakan dengan bahasa
+Python karena relatif mudah diimplementasikan dan memiliki dukungan pustaka
+Python yang cukup banyak untuk tugas-tugas kecerdasan buatan. Dalam laman
+resminya, Pytorch disebutkan sebagai pustaka yang dioptimalkan untuk
+pemrosesan tensor deep learning menggunakan CPU dan GPU. Masih menurut
+laman resminya, dua keunggulan Pytorch adalah n-dimensional tensor seperti yang
+terdapat di NumPy tetapi dapat berjalan di GPU, serta automatic differentiation
+untuk membangun dan melatih model jaringan saraf. Untuk jaringan saraf modern,
+38
+GPU dapat mempercepat proses pelatihan hingga 50 kali lebih cepat sehingga
+sangat menguntungkan apabila pelatihan dilakukan di GPU. Automatic
+differentiation memudahkan proses komputasi backward pass secara otomatis.
+Fungsi ini dapat berjalan dengan adanya paket autograd. Ketika menggunakan
+autograd, forward pass akan membuat computational graph, nodes dari graph
+adalah tensor dan edges adalah fungsi yang akan menghasilkan keluaran tensor dari
+masukan tensor. Backpropagation melalui graph akan mempermudah perhitungan
+gradien.
+Pustaka lain yang banyak digunakan dalam penelitian ini adalah NumPy.
+NumPy adalah pustaka fundamental untuk komputasi saintifik dalam bahasa
+Python. NumPy menyediakan objek array multidimensional, berbagai jenis objek
+turunan, dan operasi cepat pada array seperti matematika, logika, manipulasi
+bentuk, pengurutan, seleksi, transformasi Fourier diskret, aljabar linier dasar,
+statistika dasar, dan simulasi acak. Dalam penelitian ini, NumPy digunakan untuk
+memberikan bounding box dalam proses deteksi objek. NumPy membantu
+mengubah hasil dari GPU ke CPU untuk menampilkan hasil deteksi objek dan
+estimasi urutan tampilan.
+Tata Laksana Penelitian
+Tata laksana penelitian ini ditunjukkan pada Gambar 4.2.
+39
+Gambar 4.2. Diagram alir tata laksana penelitian
+IV.2.1. Studi Literatur
+Dalam penelitian ini, peneliti mencari literatur yang berkaitan dan
+mendukung dasar teori penelitian melalui laman jurnal seperti ScienceDirect dan
+IEEE Xplore yang dilanggan oleh Universitas Gadjah Mada. Proses pencarian
+literatur ini bertujuan untuk membandingkan penelitian ini dengan penelitian
+terdahulu dan untuk memperkuat hipotesis yang diajukan oleh peneliti.
+IV.2.2. Pengumpulan Data dan Pemrosesan Awal Data
+Pembangunan dataset dilakukan dengan proses pengambilan gambar
+bengkok, gunting anatomi, dan pinset menggunakan kamera Samsung A15 5G.
+Pengambilan gambar dilakukan secara vertikal dengan kamera berada di atas meja
+sejauh 50 cm, dan objek yang akan diambil gambarnya diletakkan di atas meja.
+Masing-masing objek diambil gambarnya sebanyak 60 kali, sehingga total gambar
+yang perlu dianotasi adalah 180 gambar. Proses pembangunan dataset dilakukan
+dengan anotasi gambar di laman Makesense.ai. Makesense.ai adalah laman daring
+untuk melakukan anotasi gambar yang digunakan untuk tugas visi komputer seperti
+40
+deteksi objek dan segmentasi gambar. Gambar 4.3 menunjukkan tampilan
+Makesense.ai.
+Gambar 4.3. Halaman editor Makesense.ai
+Format yang dapat diekspor dari hasil anotasi di Makesense.ai adalah format
+YOLO, VOC XML, dan CSV. Untuk penelitian ini, dipilih format YOLO agar
+sesuai dengan model yang akan digunakan, yaitu YOLOv8.
+IV.2.3. Pengembangan dan Konstruksi Sistem
+Proses ini diawali dengan pengembangan yang mencakup penetapan
+tuntutan rancangan yang ingin dicapai oleh sistem dan penyusunan diagram alirnya.
+Setelah itu, proses dilanjutkan dengan melakukan konstruksi atau pembangunan
+sistem berdasarkan rancangan yang telah dibuat, yang mencakup sistem perangkat
+keras maupun perangkat lunak. Proses utama dari tahap ini adalah penulisan kode
+untuk deteksi objek dan estimasi urutan tampilan menggunakan bahasa
+pemrograman Python pada Google Colab Pro, dengan kerangka kerja utama yang
+digunakan adalah YOLOv8 dan MiDaS.
+Untuk menggunakan dataset yang sudah dianotasi dalam proses pelatihan,
+Roboflow digunakan untuk memudahkan proses pembagian dataset menjadi data
+latih, data validasi, dan data uji. Proses di Roboflow berjalan secara otomatis
+41
+dengan cara membuat proyek baru di ruang kerja Roboflow. Setelah berhasil
+membuat proyek baru, gambar dan hasil anotasi label dari Makesense.ai diunggah
+ke Roboflow. Pengaturan di Roboflow yang dapat disesuaikan meliputi
+perbandingan antara jumlah data latih, data validasi, dan data uji. Selain itu, dapat
+juga dipilih pre-processing dan augmentasi yang akan digunakan. Dalam penelitian
+ini, augmentasi data yang digunakan adalah flip, rotasi, dan noise. Augmentasi
+flipping adalah teknik augmentasi di mana gambar dibalik secara horizontal atau
+vertikal. Rotasi sendiri merupakan teknik augmentasi di mana gambar diputar
+dengan sudut tertentu, baik searah jarum jam maupun berlawanan arah jarum jam.
+Augmentasi terakhir yang dipakai adalah noise, di mana gambar asli ditambahkan
+dengan berbagai jenis kebisingan untuk mensimulasikan gangguan atau variasi acak
+dalam data gambar. Secara keseluruhan, augmentasi yang dipakai dalam tahapan
+ini adalah flipping horizontal, rotasi di antara −15° dan +15°, serta noise sebanyak
+1,45% dari seluruh piksel. Gambar 4.4 menunjukkan tampilan ruang kerja
+Roboflow.
+Gambar 4.4. Tampilan ruang kerja Roboflow
+Dataset yang sudah terbentuk di Roboflow dapat diakses di Google Colab
+dengan cara membuat instance kelas Roboflow dengan memasukkan API key yang
+42
+bersifat unik untuk setiap proyek. Kelas Roboflow diimpor dari pustaka roboflow
+yang dapat diinstal terlebih dahulu dengan perintah `!pip install`. Instance yang
+sudah ada memiliki fungsi download yang menerima parameter “yolov8” untuk
+mengunduh dataset sesuai format YOLOv8. Setelah kode ini dijalankan, di bagian
+files Google Colab akan terbentuk folder sesuai dengan nama dataset dari
+Roboflow. Di dalam folder tersebut terdapat folder `test`, `train`, dan `valid`.
+Terdapat juga file README dan data.yaml yang mengatur konfigurasi dari dataset.
+Di dalam masing-masing folder `test`, `train`, dan `valid` terdapat folder `images`
+dan `labels`.
+IV.2.4. Pelatihan Model
+Pelatihan model merupakan tahapan selanjutnya setelah dataset berhasil
+terbentuk di Roboflow. Model yang digunakan untuk melakukan deteksi objek
+adalah model YOLOv8n, YOLOv8s, YOLOv8m, YOLOv8l, dan YOLOv8x.
+Kelima varian model YOLO tersebut akan dilatih dengan dataset yang sudah
+terbentuk agar mampu mendeteksi objek baru yang terdiri dari bengkok, pinset, dan
+gunting anatomis. Adapun model estimasi urutan tampilan yang akan digunakan
+dalam penelitian ini adalah model MiDaS dari Intel Labs. Model MiDaS tidak akan
+dilatih ulang dan hanya akan digunakan secara langsung ke gambar yang sudah
+dideteksi objek oleh YOLOv8.
+IV.2.5. Uji Model
+Model yang sudah dilatih dapat dilihat performanya berdasarkan metriks
+akurasi Confusion Matrix, F1-Score, dan mean Average Precision (mAP).
+Confusion matrix menunjukkan jumlah prediksi yang benar dan salah yang dibuat
+oleh model, dibandingkan dengan kelas aktual dari data yang diuji. Matriks ini
+memberikan gambaran rinci tentang bagaimana model klasifikasi bekerja, termasuk
+kesalahan yang dibuat oleh model di antara kelas-kelas yang berbeda. Precision
+mengukur proporsi prediktif positif yang benar-benar positif. Ini adalah ukuran dari
+ketepatan atau akurasi prediksi positif model. Recall mengukur proporsi instance
+positif yang benar-benar teridentifikasi sebagai positif oleh model. Adapun F1-
+Score adalah rata-rata harmonis dari precision dan recall. Ini memberikan
+keseimbangan antara keduanya dan berguna ketika kita membutuhkan metrik
+43
+tunggal untuk mengevaluasi model, terutama ketika ada trade-off antara precision
+dan recall. Metriks terakhir adalah mAP yang memberikan ukuran keseluruhan
+kinerja model dengan memperhitungkan baik presisi maupun recall pada berbagai
+threshold atau kelas.
+IV.2.6. Analisis dan Pembahasan
+Analisis dan pembahasan penelitian ini mencakup analisis performa melalui
+metrik akurasi yang telah dibahas pada tahap sebelumnya. Selain itu, tahap ini juga
+membandingkan kombinasi varian YOLOv8 dan MiDaS yang paling efisien dan
+optimal untuk digunakan dalam sistem prediksi dan estimasi urutan tampilan.
+Selain itu, dalam analisis ini juga diidentifikasi pengaruh proses pra-pemrosesan
+gambar dan augmentasi terhadap metrik akurasi model. Struktur model YOLOv8
+juga dibedah untuk melihat bagaimana pengaruh infrastruktur model terhadap hasil
+prediksi. Hasil penelitian akan diolah melalui proses perangkuman hasil prediksi
+menggunakan metrik akurasi yang disajikan dalam bentuk tabel dan statistik, serta
+pengujian keterkaitan antara setiap variabel yang diajukan dalam penelitian ini.
+IV.2.7. Penulisan Laporan
+Sesuai dengan format laporan dari Departemen Teknik Nuklir dan Teknik
+Fisika (DTNTF) Universitas Gadjah Mada, penulisan laporan terdiri dari enam bab,
+yaitu:
+1. Pendahuluan
+2. Tinjauan Pustaka
+3. Dasar Teori
+4. Pelaksanaan Penelitian
+5. Hasil dan Pembahasan
+6. Kesimpulan dan Saran
+44
+HASIL DAN PEMBAHASAN
+Dalam penelitian ini, metrik akurasi yang digunakan untuk mengevaluasi
+performa sistem adalah metrik mean Average Precision (mAP). Metrik mAP dipilih
+karena metrik ini menggabungkan antara presisi (seberapa banyak prediksi yang
+relevan) dengan recall (seberapa banyak data relevan yang berhasil dideteksi).
+Penggabungan presisi dan recall menunjukkan keseimbangan performa sistem.
+Metrik mAP juga cocok untuk mengevaluasi sistem dalam penelitian ini karena
+mampu menangani sistem dengan banyak kelas. Kelas yang digunakan dalam
+penelitian ini terdiri dari 3 kelas yaitu kelas bengkok, kelas gunting anatomis, dan
+kelas pinset. Kemampuan mAP untuk mengevaluasi performa deteksi setiap kelas
+dan menggabungkannya secara rata-rata membuatnya cocok untuk digunakan
+dalam penelitian ini. Selain kemampuan penanganan multi-kelas, mAP juga
+melakukan penilaian pada berbagai tingkat threshold Intersection over Union
+(IoU). Model akan dievaluasi pada berbagai tingkat ketepatan dalam melakukan
+deteksi, hal ini dapat memberikan gambaran detail dari kualitas prediksi. Semakin
+tinggi nilai mAP, semakin baik performa sistem deteksi objek. Penggunaan metrik
+mAP secara luas dalam banyak penelitian dan kompetisi juga memudahkan untuk
+melakukan perbandingan dengan penelitian lain ataupun standar yang sudah ada.
+Penelitian ini menggunakan lima varian YOLOv8 untuk dibandingkan
+performanya menggunakan metrik mAP. Kelima varian YOLOv8 yang digunakan
+adalah YOLOv8n, YOLOv8s, YOLOv8m, YOLOv8l, dan YOLOv8x. Secara
+berurutan, jumlah parameter dari kelima varian tersebut adalah 3,2 juta; 11,2 juta;
+25,9 juta; 43,7 juta; dan 68,2 juta. Tabel 5.1 menunjukkan performa setiap varian
+pada data validasi yang diukur dengan metrik mAP. Terdapat dua jenis mAP yang
+ditunjukkan, yaitu mAP50 dan mAP50-90. Nilai 50 dan 50-90 menunjukkan
+ambang batas yang digunakan untuk mengukur kinerja. Nilai 50 berarti ambang
+batas IoU yang digunakan adalah 0,5, sedangkan nilai 50-90 berarti ambang batas
+IoU yang digunakan berada dalam rentang 0,5 sampai 0,95. Sampel kelas dalam
+data validasi adalah 25 kelas Bengkok, 18 kelas Gunting Anatomi, dan 17 kelas
+45
+Pinset. Tabel 5.1 menunjukkan nilai mAP untuk lima varian YOLOv8 dengan
+menggunakan data validasi.
+Tabel 5.1. Nilai mAP untuk kelima varian YOLOv8
+Varian
+YOLOv8n
+YOLOv8s
+YOLOv8m
+YOLOv8l
+YOLOv8x
+Kelas
+mAP50
+mAP50-
+90
+mAP50
+mAP50-
+90
+mAP50
+mAP50-
+90
+mAP50
+mAP50-
+90
+mAP50
+mAP50-
+90
+Bengkok
+0,995
+0,957
+0,995
+0,965
+0,995
+0,969
+0,995
+0,966
+0,995
+0,957
+Gunting
+Anatomi
+0,992
+0,799
+0,99
+0,847
+0,995
+0,812
+0,995
+0,785
+0,956
+0,756
+Pinset
+0,976
+0,668
+0,972
+0,745
+0,96
+0,706
+0,971
+0,646
+0,938
+0,608
+All
+0,988
+0,808
+0,986
+0,852
+0,983
+0,829
+0,987
+0,799
+0,963
+0,774
+Lima varian model YOLOv8 (YOLOv8n, YOLOv8s, YOLOv8m,
+YOLOv8l, dan YOLOv8x) dibandingkan dengan menggunakan dua metrik utama:
+mean Average Precision (mAP) dengan ambang batas IoU sebesar 50% (mAP50)
+dan mAP dengan IoU yang bervariasi dari 50% hingga 90% (mAP50-90). Evaluasi
+dilakukan dengan cara mendeteksi tiga kelas objek: bengkok, gunting anatomi, dan
+pinset. Dari ketiga kelas, nilai mAP50 untuk semua varian menunjukkan hasil yang
+sangat baik, ditandai dengan performa deteksi yang sangat tinggi. Pada mAP50-90,
+nilainya bervariasi antara 0,744 hingga 0,852, hal ini menunjukkan performa yang
+kuat tetapi dengan beberapa penurunan pada tingkat IoU yang lebih tinggi. Bila
+dilihat pada masing-masing objek, kelas bengkok menunjukkan performa yang
+konsisten di angka 0,995 untuk nilai mAP50. Semua model mampu dengan baik
+mendeteksi kelas ini pada IoU sebesar 50%. Adapun untuk nilai mAP50-90 untuk
+kelas bengkok masih menunjukkan performa yang baik dengan angka berkisar
+antara 0,957 hingga 0,969. Pada kelas gunting anatomi, nilai mAP50-90 masih
+menunjukkan nilai yang baik dengan nilai berkisar 0,956 hingga 0,995. Namun,
+nilai mAP50-90 menunjukkan penurunan performa dengan kisaran nilai dari 0,756
+46
+hingga 0,847. Hal ini menunjukkan pada IoU yang lebih tinggi, lebih sulit untuk
+mendeteksi kelas gunting anatomi. Nilai mAP50 pada kelas pinset masih diatas 0,9,
+hal ini menunjukkan performa yang masih baik meskipun lebih rendah dari kedua
+kelas sebelumnya. Variasi yang lebih besar terlihat pada nilai mAP50-90 yang
+berkisar dari 0,608 hingga 0,745. Berdasarkan hasil tersebut, model YOLOv8n,
+YOLOv8s, dan YOLOv8l disarankan digunakan bila deteksi dengan tingkat IoU
+yang beragam (50% hingga 90%) lebih penting. Ketiga varian tersebut mampu
+menunjukkan performa yang konsisten. Bila dilihat dari aspek efisiensi dan
+performa, YOLOv8s dan YOLOv8m adalah pilihan yang baik karena menawarkan
+kombinasi presisi tinggi dan kinerja yang stabil pada berbagai tingkatan IoU.
+Metrik kedua yang coba dianalisis dari kelima varian YOLOv8 adalah
+metrik F1 score dengan tingkat confidence. Grafik F1-Confidence digunakan untuk
+menganalisis performa setiap model dalam berbagai tingkat confidence, membantu
+menentukan confidence level optimal bagi masing-masing varian. Gambar 1.1
+menunjukkan grafik F1-Confidence untuk varian YOLOv8n.
+Gambar 5.1. F1 score – Confidence untuk varian YOLOv8n
+47
+Sumbu X menunjukkan tingkat keyakinan prediksi dari model, mulai dari 0
+hingga 1. Confidence yang lebih tinggi berarti model lebih yakin dengan
+prediksinya. Sumbu Y menunjukkan nilai F1 score, yang merupakan metrik
+keseimbangan antara presisi dan recall. F1 score memiliki nilai antara 0 dan 1,
+dengan 1 menunjukkan performa sempurna. Terdapat tiga garis berwarna tipis
+untuk masing-masing kelas (0: bengkok, 1: gunting anatomis, 2: pinset) serta satu
+garis tebal biru untuk ‘all classes’. Kurva setiap kelas menunjukkan bagaimana
+nilai F1 score berubah dengan berbagai level confidence untuk prediksi di kelas
+tersebut. Untuk varian nano (n), gabungan F1 score tertinggi untuk semua kelas
+adalah 0,96 pada confidence 0,545. Ini menunjukkan bahwa pada level confidence
+0,545, model mencapai performa terbaik secara keseluruhan dengan nilai F1
+sebesar 0,96 untuk semua kelas. Ketika confidence mendekati nilai 1, F1 score
+cenderung menurun untuk semua kelas. Ini terjadi karena prediksi yang sangat
+yakin tetapi lebih sedikit, sehingga mengorbankan recall dan menghasilkan F1
+score lebih rendah. Gambar 5.2 hingga Gambar 5.5 menunjukkan grafik F1-
+Confidence untuk varian YOLOv8s, YOLOv8m, YOLOv8l, dan YOLOv8x.
+Gambar 5.2. F1 score – Confidence untuk varian YOLOv8s
+48
+Gambar 5.3. F1 score – Confidence untuk varian YOLOv8m
+Gambar 5.4. F1 score – Confidence untuk varian YOLOv8l
+49
+Gambar 5.5. F1 score – Confidence untuk varian YOLOv8x
+Berdasarkan Gambar 5.1 hingga Gambar 5.5, varian YOLOv8m memiliki
+performa paling baik dengan mendapatkan F1 score sebesar 0,97 pada nilai
+confidence sebesar 0,635. Secara berturut-turut, varian terbaik adalah YOLOv8m,
+YOLOv8l, YOLOv8n, YOLOv8s, dan YOLOv8x. Kelima grafik juga
+menunjukkan konsistensi berupa penurunan confidence ketika mendekati nilai 1,
+F1 score cenderung menurun untuk semua kelas. Ini terjadi karena prediksi yang
+sangat yakin tetapi lebih sedikit, sehingga mengorbankan recall dan menghasilkan
+F1 score lebih rendah.
+Kriteria lain yang digunakan untuk membandingkan varian terbaik dalam
+sistem penelitian ini adalah kriteria kecepatan. Kecepatan yang dimaksud di sini
+adalah waktu praproses per gambar, waktu inferensi per gambar, dan waktu
+pascaproses per gambar. Waktu praproses adalah waktu yang meliputi langkah-
+langkah untuk menyesuaikan gambar masukan agar sesuai dengan gambar yang
+dapat diproses oleh model. Waktu inferensi adalah waktu yang digunakan oleh
+model untuk melakukan prediksi bounding box dan label kelas untuk setiap objek
+dalam gambar. Waktu pascaproses adalah waktu yang digunakan untuk melakukan
+50
+format hasil prediksi duplikat (non-max suppression) dan pengurutan, serta untuk
+melakukan format hasil prediksi agar siap ditampilkan. Model divalidasi dengan
+menggunakan data validasi dan akan menghasilkan nilai mAP serta aspek
+kecepatan. Tabel 5.2 menunjukkan kecepatan setiap varian dalam melakukan
+proses deteksi mulai dari praproses hingga pascaproses.
+Tabel 5.2. Kecepatan pemrosesan untuk kelima varian YOLOv8
+Varian
+Jenis Waktu
+(s)
+YOLOv8n
+YOLOv8s
+YOLOv8m
+YOLOv8l
+YOLOv8x
+Praproses
+0,4
+0,4
+0,3
+0,4
+0,8
+Inferensi
+37,4
+52,7
+42,2
+50,3
+100,4
+Pascaproses
+6,5
+5,4
+3,1
+3,3
+5,6
+Berdasarkan kecepatan pemrosesan, kelima varian YOLOv8 tidak jauh
+berbeda untuk waktu praproses dengan waktu paling lama sebesar 0,8 ms pada
+YOLOv8x. Waktu praproses yang seragam dan relatif singkat untuk sebagian besar
+varian membuat fokus dapat dialihkan ke waktu inferensi dan pascaproses. Untuk
+penggunaan dengan waktu nyata seperti deteksi dan estimasi jarak pada alat operasi
+bedah ringan, waktu inferensi yang lebih cepat akan sangat diutamakan.
+Berdasarkan data, YOLOv8n dan YOLOv8m lebih disarankan karena memiliki
+waktu inferensi yang paling singkat. Meskipun waktu pascaproses juga penting,
+variabilitasnya tidak sebesar waktu inferensi. Namun, model dengan waktu
+pascaproses yang lebih rendah seperti YOLOv8m juga dapat memberikan
+keuntungan tambahan. Bila dikaitkan dengan struktur jaringan setiap varian,
+semakin kompleks model (dengan lebih banyak lapisan dan parameter), semakin
+lama waktu yang diperlukan untuk melakukan inferensi. Oleh karena itu,
+YOLOv8x yang memiliki struktur paling kompleks membutuhkan waktu inferensi
+yang paling lama. Setelah inferensi, model harus memproses hasil deteksi,
+menerapkan non-maximum supression (NMS), dan mengelompokkan bounding
+box. Model dengan lebih banyak deteksi (karena akurasi yang lebih tinggi)
+memerlukan waktu pascaproses yang lebih lama untuk menyaring dan
+51
+mengelompokkan hasil. Namun, dengan optimasi, model yang lebih besar seperti
+YOLOv8m dan YOLOv8l dapat mempertahankan waktu pascaproses yang lebih
+rendah. Varian YOLOv8n dan YOLOv8s memiliki struktur yang lebih sederhana
+dan lebih sedikit parameter memungkinkan inferensi yang lebih cepat, cocok untuk
+aplikasi yang memerlukan kccepatan deteksi dengan keterbatasan sumber daya
+komputasi. YOLOv8m memiliki keseimbangan antara kompleksitas dan kecepatan,
+menjadikannya pilihan yang baik untuk aplikasi yang memerlukan keseimbangan
+antara kecepatan dan akurasi. Varian YOLOv8l dan YOLOv8x memiliki struktur
+kompleks dengan lebih banyak lapisan dan parameter, cocok untuk aplikasi yang
+memerlukan akurasi tinggi meskipun waktu inferensi yang lebih lama.
+Perbandingan Varian YOLOv8 dan MiDaS
+Penelitian ini menggunakan variasi YOLOv8 dan MiDaS untuk
+mendapatkan kombinasi yang paling baik diterapkan dalam sistem waktu nyata.
+Lima varian dari YOLOv8 akan dikombinasikan dengan tiga varian MiDaS, yaitu
+Small, Hybrid, dan Large. Jumlah total kombinasi YOLOv8 dan MiDaS adalah 15
+kombinasi yang ditunjukkan pada Tabel 5.3. Kombinasi dua model antara YOLOv8
+dan MiDaS dilakukan secara asinkron. Untuk dapat menggunakan kedua model
+secara asinkron, diperlukan pustaka ‘nest_asyncio’, yang berguna untuk
+menjalankan proses inferensi kedua model
+secara bersamaan.
+Fungsi
+‘detect_objects’ digunakan untuk mendeteksi objek dalam frame. Model deteksi
+objek akan memberikan hasil berupa bounding box dan label kelas dari objek yang
+terdeteksi. Fungsi ‘estimate_depth’ digunakan untuk memperkirakan urutan
+tampilan dalam frame. Transformasi dilakukan pada frame, dan kemudian model
+MiDaS digunakan untuk menghasilkan peta kedalaman. Fungsi ‘process_batch’
+menggabungkan deteksi objek dan estimasi urutan tampilan dalam satu batch. Hasil
+deteksi objek dan peta kedalaman ditampilkan dalam frame. Fungsi ‘main’ adalah
+fungsi utama yang menjalankan seluruh proses. Video dibuka, frame dibaca, dan
+diproses dalam batch. Hasilnya kemudian disimpan ke video output.
+52
+Tabel 5.3. Daftar kombinasi YOLOv8 dan MiDaS
+MiDaS
+YOLOv8
+MiDaS Small
+MiDaS Hybrid
+MiDaS Large
+YOLOv8
+Nano
+YOLOv8 Nano + Small
+YOLOv8 Nano + Hybrid
+YOLOv8 Nano +
+Large
+YOLOv8
+Small
+YOLOv8 Small + Small
+YOLOv8 Small + Hybrid
+YOLOv8 Small +
+Large
+YOLOv8
+Medium
+YOLOv8 Medium + Small
+YOLOv8 Medium + Hybrid
+YOLOv8 Medium +
+Large
+YOLOv8
+Large
+YOLOv8 Large + Small
+YOLOv8 Large + Hybrid
+YOLOv8 Large +
+Large
+YOLOv8
+X-Large
+YOLOv8 X-Large + Small
+YOLOv8 X-Large + Hybrid
+YOLOv8 X-Large +
+Large
+Gambar 5.6. Grafik waktu inferensi kombinasi antara YOLOv8 dan MiDas
+Berdasarkan data pada Gambar 5.6, menunjukkan bahwa varian YOLOv8
+dengan MiDaS small secara konsisten menunjukkan waktu pemrosesan yang lebih
+cepat dibandingkan dengan MiDaS hybrid dan MiDaS large. Hal ini karena model
+MiDaS small lebih ringan dan membutuhkan komputasi yang lebih sedikit.
+Penggunaan pendekatan asinkron di sisi kode untuk menjalankan deteksi objek dan
+estimasi urutan tampilan secara paralel, memungkinkan kedua proses tersebut dapat
+berjalan secara bersamaan, yang membantu mengurangi waktu pemrosesan total.
+Penggunaan varian YOLOv8 dan MiDaS yang berbeda menunjukkan bahwa model
+dengan ukuran lebih besar (seperti MiDaS hybrid dan large) memerlukan lebih
+53
+banyak waktu untuk pemrosesan. Hal ini karena model yang lebih kompleks
+memerlukan komputasi yang lebih banyak. Berdasarkan hasil waktu pemrosesan,
+kombinasi YOLOv8n atau YOLOv8m dengan MiDaS small menunjukkan efisiensi
+yang tinggi. Hal ini penting untuk pengaplikasian dalam bidang dengan kecepatan
+respon menjadi kunci.
+Tabel 5.4. Hasil inferensi model YOLOv8 dan MiDaS
+YOLOv8n x MiDaS Small
+YOLOv8n x MiDaS Hybrid
+YOLOv8n x MiDaS Large
+YOLOv8s x MiDaS Small
+54
+YOLOv8s x MiDaS Hybrid
+YOLOv8s x MiDaS Large
+Hasil estimasi urutan tampilan menggunakan MiDaS ditunjukkan pada
+Tabel 5.4. Tabel 5.4 menunjukkan hasil inferensi menggunakan enam varian
+kombinasi yaitu: YOLOv8n MiDaS small, YOLOv8n MiDaS hybrid, YOLOv8n
+MiDaS large, YOLOv8s MiDaS small, YOLOv8s MiDaS hybrid, dan YOLOv8s
+MiDaS large. Berdasarkan hasil tersebut, perbedaan utama antara hasil estimasi
+urutan tampilan dari ketiga varian MiDaS terletak pada kontras dan gradasi warna
+yang mewakili urutan tampilan. MiDaS small memberikan hasil yang lebih kontras
+dengan perubahan urutan tampilan yang tajam dan signifikan di area kecil. MiDaS
+hybrid memberikan hasil yang menonjol dengan perubahan urutan tampilan yang
+lebih jelas dan dinamis. MiDaS large memberikan hasil yang lebih halus dan
+konsisten dengan gradasi warna yang lebih natural. Hasil inferensi untuk kombinasi
+yang lain terdapat di bagian lampiran.
+Visualisasi kurva MTF untuk model MiDaS Large menunjukkan penurunan
+nilai MTF secara tajam seiring bertambahnya frekuensi spasial, ditunjukkan pada
+Gambar 5.7. Kurva ini memiliki bentuk yang halus dan konsisten, yang
+mengindikasikan bahwa model ini menghasilkan peta kedalaman dengan kontras
+tepi (edge contrast) yang cenderung realistis dan stabil. Titik MTF50, yaitu
+frekuensi di mana nilai MTF turun ke 0.5, berada pada sekitar 0,0063. Nilai ini
+mencerminkan tingkat ketajaman sedang dalam persepsi spasial terhadap hasil
+55
+estimasi urutan tampilan, yang cocok untuk aplikasi deteksi objek seperti alat
+operasi ringan.
+Gambar 5.7. Kurva MTF Rata-rata untuk Model MiDaS Large
+Gambar 5.8. Kurva MTF Rata-rata untuk Model MiDaS Hybrid
+56
+Gambar 5.9. Kurva MTF Rata-rata untuk Model MiDaS Small
+Pada kurva MTF untuk model MiDaS hybrid (Gambar 5.8), pola penurunan
+nilai MTF sangat mirip dengan model MiDaS Large, yaitu curam di awal dan
+melandai setelah frekuensi mencapai sekitar 0,3. Kurva ini juga menunjukkan
+MTF50 sebesar 0,0063, yaitu sama dengan model MiDaS large, menunjukkan
+bahwa kualitas ketajaman spasial dari peta kedalaman relatif setara antara
+keduanya. Dengan hasil ini, MiDaS hybrid, dapat menjadi alternatif ringan dari
+MiDaS large, namun dengan akurasi spasial yang tetap kompetitif. Gambar 5.9
+menunjukkan grafik MTF dari MiDaS small yang menggambarkan pola berbeda
+dibandingkan dengan dua model sebelumnya. Nilai MTF awal berada di atas 2,
+yang menunjukkan ketidaknormalan dalam normalisasi kontras atau respons spasial
+yang terlalu tinggi, kemungkinan karena peta kedalaman yang dihasilkan memiliki
+banyak fluktuasi tajam yang tidak proporsional terhadap tekstur nyata gambar. Hal
+ini berdampak pada nilai MTF50 yang tercatat lebih tinggi, yaitu 0,0094, yang
+berarti frekuensi spasial harus lebih tinggi sebelum kontras menurun hingga 0,5.
+Meskipun ini terdengar baik secara numerik, hasil ini mengindikasikan bahwa
+model MiDaS small menghasilkan estimasi urutan tampilan dengan noise atau
+ketajaman palsu.
+57
+Pengaruh Proses Pra-Pemrosesan Gambar dan Augmentasi
+Gambar mentah yang digunakan dalam penelitian ini diambil dengan
+menggunakan kamera belakang Samsung A15. Kamera yang digunakan terdiri dari
+tiga lensa dengan resolusi: lensa utama 50.0 MP, lensa kedua 5.0 MP, dan lensa
+ketiga 2.0 MP. Ukuran aperture (bukaan lensa) atau F-number dari masing-masing
+lensa secara berurutan adalah F1.8, F2.2, dan F2.4. Kamera utama dilengkapi
+dengan fitur auto fokus yang membantu dalam memperoleh gambar yang tajam dan
+fokus secara otomatis. Selain itu, kamera ini mendukung perekaman video pada
+resolusi Full HD (1920 x 1080) dengan kecepatan 30 frame per detik (fps), yang
+cukup untuk menghasilkan video berkualitas baik.  Gambar 5.10 menunjukkan
+salah satu sampel data yang diambil dengan kamera Samsung A15.
+Gambar 5.10. Sampel data yang diambil dengan kamera Samsung A15
+Sebelum
+diaugmentasi,
+gambar
+yang
+telah
+dilabeli
+dilakukan
+prapemrosesan auto-orient. Auto-orient adalah langkah dalam proses pemrosesan
+gambar yang bertujuan untuk secara otomatis mengorientasikan gambar ke arah
+yang benar berdasarkan metadata yang disimpan dalam file gambar. Selain itu,
+prapemrosesan lain yang diterapkan pada gambar ada resize gambar menjadi
+58
+640x640. Kedua prapemrosesan ini diterapkan di Roboflow sebelum gambar
+diaugmentasi.
+Gambar 5.11. Frekuensi anotasi setiap kelas pada objek
+Gambar 5.11 menunjukkan distribusi jumlah anotasi dalam dataset.
+Sebagian besar data memiliki satu anotasi (90 data), diikuti oleh data dengan 2
+anotasi (60 data), dan data dengan 3 anotasi yang paling sedikit (30 data). Dataset
+ini memiliki lebih banyak data dengan anotasi tunggal dibandingkan data dengan
+anotasi ganda atau lebih. Hal ini menunjukkan bahwa sebagian besar objek dalam
+dataset relatif sederhana.
+Setelah prapemrosesan, gambar yang telah terlabeli kemudian dilakukan
+augmentasi. Jenis augmentasi yang diterapkan pada dataset penelitian ini yaitu: flip
+(pembalikan), rotasi, dan noise. Pemilihan ketiga augmentasi tersebut memastikan
+bahwa model dapat menangani berbagai varian dalam data, yang penting untuk
+generalisasi yang baik. Model tidak akan hanya bekerja dengan baik pada gambar
+yang mirip dengan data latih tetapi juga pada gambar yang mungkin memiliki
+sedikit perbedaan dalam orientasi, posisi, dan kualitas. Augmentasi data ini secara
+keseluruhan meningkatkan akurasi dan robustness dari model deteksi dan estimasi
+59
+jarak dengan memastikan bahwa model dapat menangani berbagai kondisi yang
+mungkin dihadapi dalam penggunaan nyata di ruang operasi. Flipping yang
+digunakan dalam penelitian ini adalah flipping horizontal. Adapun rotasi yang
+digunakan dalam rentang -15 sampai +15. Noise yang ditambahkan ke dalam
+dataset sebesar 1.45% piksel. Proses augmentasi dilakukan di Roboflow dengan
+total keluaran gambar sebanyak 432 gambar. Total gambar yang dihasilkan bisa
+dikalkulasi melalui perhitungan 126 data latih x 3 varian augmentasi + 36 data
+validasi + 18 data tes. Gambar 5.12 menunjukkan gambar yang dirotasi sebesar 14
+dan diberi noise 0.92%. Gambar tersebut menunjukkan ada area hitam yang
+menandakan adanya pergeseran karena rotasi dan terdapat bintik-bintik putih
+karena noise.
+Gambar 5.12. Objek latih setelah diaugmentasi
+60
+Struktur Kode Sistem
+Dataset yang sudah terbentuk dapat didownload dengan mengakses
+Roboflow API melalui Google Colab. Struktur dataset yang terdownload di Google
+Colab tersusun dalam direktori seperti berikut:
+/content/deteksi-alat-operasi-v2-1
+├── /test
+├── /train
+├── /valid
+├── README.dataset.txt
+├── README.roboflow.txt
+└── data.yaml
+Di dalam folder test, train, dan valid, terdapat masing-masing dua folder
+images dan labels. File data.yaml merupakan file konfigurasi untuk YOLOv8 yang
+berisi jalur menuju folder train, folder test, folder valid. Selain itu data.yaml juga
+berisi jumlah kelas dan nama kelas yang ingin dideteksi.
+Dalam kode sistem, terdapat tiga fungsi utama yang digunakan supaya
+sistem mampu berjalan. Tiga fungsi tersebut adalah fungsi detect_objects, fungsi
+estimate_depth, dan fungsi main. Fungsi detect_objects adalah fungsi yang
+dipanggil untuk melakukan deteksi objek dan mengembalikan seluruh bounding
+boxes dan label hasil deteksi. Fungsi ini menerima dua input parameter yaitu model
+dan image_path. Fungsi ini bekerja dengan melakukan inferensi terlebih dahulu
+melalui perintah model(image_path). Proses inferensi kemudian disimpan dalam
+variabel results. Selain itu, fungsi ini juga menginisialisasi membuat variabel
+kosong all_bounding_boxes dan all_labels. Kedua variabel terakhir ini berupa list
+dalam Python. Variabel results yang menerima hasil inferensi dapat dilakukan
+looping untuk kemudian diambil hasil deteksi bounding box dan labelnya ke
+variabel all_bounding_boxes dan all_labels. Hasil deteksi ditambahkan ke list
+menggunakan fungsi append. Bila looping variabel results sudah selesai, fungsi
+akan mengembalikan variabel list all_bounding_boxes dan all_labels. Keseluruhan
+diagram blok sistem dapat dilihat pada Gambar 5.13.
+61
+Gambar 5.13. Diagram blok sistem
+Fungsi kedua dalam kode sistem adalah fungsi estimate_depth yang
+merupakan fungsi untuk melakukan deteksi urutan tampilan menggunakan model
+MiDaS. Fungsi ini menerima tiga parameter masukan yaitu parameter midas,
+midas_transform, dan image_path. Parameter midas merupakan parameter yang
+berupa model MiDaS yang akan digunakan untuk melakukan inferensi.
+Midas_transform merupakan parameter yang menerima transformasi yang
+digunakan oleh model MiDaS. Parameter image_path adalah parameter untuk
+menuju direktori dari gambar yang akan diinferensi. Fungsi estimate_depth
+mengembalikan gambar depth map dalam bentuk Numpy array. Proses dalam
+fungsi ini diawali dengan pengubahan gambar menjadi tensor agar model MiDaS
+bisa melakukan inferensi. Hasil inferensi model disimpan dalam variabel
+depth_pred yang kemudian diubah menjadi Numpy array. Hasil dalam bentuk
+Numpy array inilah yang kemudian akan dikembalikan oleh fungsi estimate_depth.
+Gambar 5.14 menunjukkan potongan kode dari fungsi estimate_depth.
+Fungsi terakhir atau fungsi main dalam kode sistem adalah fungsi yang
+62
+menggabungkan serta mengkoordinasikan deteksi objek dan urutan tampilan secara
+bersamaan. Fungsi ini juga menggambar bounding box pada peta kedalaman.
+Proses penggabungan dua model dimulai dengan menginisialisasi path gambar.
+Image_path ditetapkan ke jalur gambar yang akan diproses. Time.time() digunakan
+untuk menghitung waktu pemrosesan dimulai. Selanjutnya, dua tugas asinkron
+dijalankan bersamaan yaitu: detection_task dan depth_task. Detection_task
+digunakan untuk mendeteksi objek dalam gambar. Depth_task digunakan untuk
+mengestimasi peta kedalaman gambar menggunakan fungsi estimate_depth. Kedua
+fungsi asinkron ini ditunggu tugas selesainya menggunakan kode await. Bila kedua
+tugas asinkron tadi sudah selesai, fungsi akan menggambar bounding box pada peta
+kedalaman dan melakukan visualisasi penampilan. Waktu yang dimulai dihitung
+diawal berjalannya fungsi, fungsi akan mengakhiri penghitungan dan mencetak
+waktu yang dibutuhkan untuk memproses satu gambar atau frame. Selain itu,
+bounding box yang terdeteksi akan dicetak untuk menandai kelas deteksi.
+async def estimate_depth(midas, midas_transform,
+image_path):
+orig_img_pil = Image.open(image_path)
+orig_img_for_midas =
+midas_transform(orig_img_pil).unsqueeze(0).cuda()
+with torch.no_grad():
+depth_pred = midas(orig_img_for_midas)
+depth_pred_np = depth_pred.squeeze().cpu().numpy()
+depth_map_img = Image.fromarray((depth_pred_np * 255 /
+np.max(depth_pred_np)).astype(np.uint8))
+return depth_map_img
+Gambar 5.14. Fungsi estimate_depth untuk estimasi urutan tampilan
+Ketiga fungsi diatas dalam penerapannya digunakan secara asinkron.
+Asinkronitas dalam ketiga fungsi diatas diimplementasikan menggunakan asyncio,
+yang memungkinkan menjalankan banyak operasi secara bersamaan tanpa
+memblokir eksekusi. Ini sangat berguna dalam situasi di mana beberapa tugas I/O-
+63
+bound (seperti memuat gambar, melakukan inferensi model) perlu dilakukan.
+Fungsi detect_objects, estimate_depth, dan main didefinisikan dengan kata kunci
+async  menunjukkan bahwa mereka adalah fungsi asinkron yang dapat dijalankan
+secara bersamaan dengan fungsi asinkron lainnya. Dalam fungsi main, dua tugas
+asinkron dibuat menggunakan asyncio.create_task(). Setelah tugas-tugas dibuat,
+await digunakan untuk menunggu hingga tugas-tugas ini selesai. Penggunaan await
+memungkinkan kode untuk berhenti sementara menunggu hasil dari tugas-tugas
+tersebut tanpa memblokir eksekusi tugas-tugas lainnya yang mungkin sedang
+berjalan. Dengan asinkronitas waktu pemrosesan total bisa dikurangi secara
+signifikan. Selain itu, saat satu tugas menunggu, tugas lainnya dapat dijalankan. Ini
+mengoptimalkan penggunaan CPU dan GPU. Asinkronitas memungkinkan
+eksekusi non-blocking, artinya satu tugas tidak akan menghentikan eksekusi tugas
+lainnya. Ini penting untuk menjaga responsivitas dan efisiensi sistem secara
+keseluruhan.
+64
+KESIMPULAN DAN SARAN
+Kesimpulan
+1. Sistem mampu mendeteksi dan membedakan jenis alat bedah seperti
+gunting anatomi, pinset, dan alat bengkok secara akurat. Performa terbaik
+dicapai pada YOLOv8m dengan F1 score 0,97 pada confidence 0,635, dan
+mAP50 untuk kelas bengkok mencapai 0,995, menunjukkan sistem dapat
+mengidentifikasi dan melacak lokasi alat bedah.
+2. Sistem estimasi urutan tampilan antar alat bedah berhasil dikembangkan
+menggunakan depth map dari MiDaS. Kombinasi YOLOv8 dengan MiDaS
+small menunjukkan kecepatan pemrosesan yang baik, mendukung estimasi
+urutan tampilan secara responsif.
+3. Evaluasi kombinasi YOLOv8 dan MiDaS menunjukkan model YOLOv8m
+dengan MiDaS small sebagai pilihan optimal untuk mendeteksi dan
+mengestimasi urutan tampilan alat bedah. Kombinasi ini menawarkan
+keseimbangan antara akurasi deteksi, kecepatan pemrosesan, dan
+kedalaman spasial. MiDaS small menghasilkan MTF50 lebih tinggi
+(0,0094) untuk ketajaman, sementara MiDaS hybrid dan large memberikan
+kedalaman lebih stabil dengan MTF50 sebesar 0,0063.
+Saran
+Berdasarkan proses dan analisis hasil penelitian, terdapat beberapa saran
+untuk digunakan dalam penelitian deteksi objek dan estimasi urutan tampilan pada
+alat operasi ringan, yaitu:
+• Menambah kelas baru untuk meningkatkan kemampuan mendeteksi banyak
+objek dari model yang sudah ada.
+• Melakukan tuning pada kode agar sistem deteksi objek dan estimasi urutan
+tampilan bisa berjalan halus pada sumber masukan seperti video dan
+masukan real-time.
+65
+• Melakukan perbandingan antara hasil estimasi urutan tampilan dengan
+estimasi jarak absolut agar bisa dilihat seberapa baik model yang dilatih.
+• Pengambilan gambar yang disesuaikan dengan kondisi pada ruangan
+operasi rumah sakit agar model mampu belajar dari data yang seperti
+kondisi aslinya.
