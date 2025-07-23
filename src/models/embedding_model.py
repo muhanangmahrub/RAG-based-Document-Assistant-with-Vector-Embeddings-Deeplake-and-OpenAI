@@ -1,5 +1,4 @@
 import openai
-from src.config.settings import OPENAI_API_KEY
 
 def embedding_function(texts, model="text-embedding-3-small"):
     if isinstance(texts, str):
