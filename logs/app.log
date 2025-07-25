@@ -1,0 +1,25 @@
+2025-07-25 11:08:32.195 | INFO     | src.pipeline.rag_pipeline:__init__:11 - Using existing vector store at dataset/vector_store
+2025-07-25 11:11:21.769 | INFO     | src.pipeline.rag_pipeline:__init__:11 - Using existing vector store at dataset/vector_store
+2025-07-25 11:11:33.225 | INFO     | src.models.embedding_model:embedding_function:6 - Generating embeddings for texts
+2025-07-25 11:11:34.345 | INFO     | src.models.openai_model:call_gpt4_with_full_text:11 - Calling GPT-4 with full text input
+2025-07-25 11:11:45.519 | INFO     | src.models.openai_model:call_gpt4_with_full_text:23 - GPT-4 response time: 11.17 seconds
+2025-07-25 11:13:09.281 | INFO     | src.pipeline.rag_pipeline:__init__:11 - Using existing vector store at dataset/vector_store
+2025-07-25 11:13:26.079 | INFO     | src.pipeline.rag_pipeline:query:26 - User query: jelaskan mengenai midas model
+2025-07-25 11:13:26.082 | INFO     | src.models.embedding_model:embedding_function:6 - Generating embeddings for texts
+2025-07-25 11:13:27.464 | INFO     | src.models.openai_model:call_gpt4_with_full_text:11 - Calling GPT-4 with full text input
+2025-07-25 11:13:43.424 | INFO     | src.models.openai_model:call_gpt4_with_full_text:23 - GPT-4 response time: 15.96 seconds
+2025-07-25 11:14:40.670 | INFO     | src.pipeline.rag_pipeline:__init__:14 - Creating new vector store at dataset/vector_store
+2025-07-25 11:14:43.720 | INFO     | src.pipeline.rag_pipeline:__init__:21 - Adding chunks to vector store from docs/output.txt
+2025-07-25 11:14:43.737 | INFO     | src.models.embedding_model:embedding_function:6 - Generating embeddings for texts
+2025-07-25 11:15:01.664 | INFO     | src.pipeline.rag_pipeline:query:26 - User query: apa metodologi yang digunakan dalam skripsi ini?
+2025-07-25 11:15:01.671 | INFO     | src.models.embedding_model:embedding_function:6 - Generating embeddings for texts
+2025-07-25 11:15:02.479 | INFO     | src.models.openai_model:call_gpt4_with_full_text:11 - Calling GPT-4 with full text input
+2025-07-25 11:15:08.848 | INFO     | src.models.openai_model:call_gpt4_with_full_text:23 - GPT-4 response time: 6.37 seconds
+2025-07-25 11:17:57.327 | INFO     | src.pipeline.rag_pipeline:__init__:14 - Creating new vector store at dataset/vector_store
+2025-07-25 11:17:57.530 | INFO     | src.data.data_prep:extract_text_from_pdf:31 - Text extracted from 12 to 79 pages and saved to docs/output.txt
+2025-07-25 11:18:00.332 | INFO     | src.pipeline.rag_pipeline:__init__:21 - Adding chunks to vector store from docs/output.txt
+2025-07-25 11:18:00.345 | INFO     | src.models.embedding_model:embedding_function:6 - Generating embeddings for texts
+2025-07-25 11:18:17.089 | INFO     | src.pipeline.rag_pipeline:query:26 - User query: jelaskan hasil dari penelitian dalam skripsi ini
+2025-07-25 11:18:17.097 | INFO     | src.models.embedding_model:embedding_function:6 - Generating embeddings for texts
+2025-07-25 11:18:17.884 | INFO     | src.models.openai_model:call_gpt4_with_full_text:11 - Calling GPT-4 with full text input
+2025-07-25 11:18:29.143 | INFO     | src.models.openai_model:call_gpt4_with_full_text:23 - GPT-4 response time: 11.26 seconds
