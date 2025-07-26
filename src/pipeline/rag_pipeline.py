@@ -25,10 +25,11 @@ class RAGPipeline:
         """Handles user queries by searching the vector store and generating a response."""
         logger.info(f"User query: {user_prompt}")
         search_results = self.store.search(user_prompt)
+        logger.info(f"Search results: {search_results}")
         top_score = search_results['score'][0]
         top_text = search_results['text'][0]
         top_metadata = search_results['metadata'][0]
 
         augmented_input = f"{user_prompt} {top_text}"
-        gpt_response = call_gpt4_with_full_text(augmented_input)
-        return gpt_response
+        return call_gpt4_with_full_text(augmented_input)
+    
